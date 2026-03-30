@@ -43,31 +43,51 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
 .nb.on{color:var(--b1);border-bottom-color:var(--b1);font-weight:700}
 .main{flex:1;padding:22px 28px;max-width:1440px;margin:0 auto;width:100%}
 .view{display:none}.view.on{display:block}
+/* ── Dashboard Header ─────────────────────────────────────────── */
+.dash-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border2)}
+.dash-title{font-family:'DM Serif Display',serif;font-size:19px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:10px}
+.dash-meta{display:flex;align-items:center;gap:12px}
+.live-badge{display:flex;align-items:center;gap:6px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;color:#15803d;letter-spacing:.2px}
+.live-dot{width:6px;height:6px;border-radius:50%;background:#22c55e;animation:breathe 2s ease-in-out infinite}
+.upd-lbl{font-size:11px;color:var(--text4)}
+.ref-btn{padding:6px 14px;border:1.5px solid var(--border);border-radius:8px;background:var(--white);color:var(--text3);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;display:flex;align-items:center;gap:6px}
+.ref-btn:hover{border-color:var(--b2);color:var(--b1);background:var(--b5);transform:none}
+/* ── KPI Cards ────────────────────────────────────────────────── */
 .kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:16px}
-.kpi{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;box-shadow:var(--sh);position:relative;overflow:hidden}
-.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--b1),var(--b3))}
-.kpi-lbl{font-size:10.5px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:.7px;margin-bottom:9px}
-.kpi-val{font-size:30px;font-weight:700;color:var(--b1);line-height:1;margin-bottom:5px;font-family:'DM Serif Display',serif}
-.kpi-sub{font-size:11.5px;color:var(--text3)}
+.kpi{background:var(--white);border:1px solid var(--border);border-left:4px solid var(--kc,var(--b2));border-radius:var(--r);padding:18px 20px 16px;box-shadow:var(--sh);position:relative;overflow:hidden;transition:transform .18s,box-shadow .18s}
+.kpi:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(0,53,128,.13)}
+.kpi::after{content:'';position:absolute;top:-20px;right:-20px;width:90px;height:90px;border-radius:50%;background:var(--kc,var(--b2));opacity:.05;pointer-events:none}
+.kpi-ico{font-size:20px;margin-bottom:10px;display:block;line-height:1}
+.kpi-lbl{font-size:10px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:.8px;margin-bottom:7px}
+.kpi-val{font-size:32px;font-weight:700;color:var(--text);line-height:1;margin-bottom:5px;font-family:'DM Serif Display',serif}
+.kpi-sub{font-size:11px;color:var(--text3)}
+.k1{--kc:#003580}.k2{--kc:#16a34a}.k3{--kc:#7c3aed}.k4{--kc:#d97706}.k5{--kc:#dc2626}
+/* ── Compliance Strip ─────────────────────────────────────────── */
 .cstrip{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
-.cc{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:14px 18px;display:flex;align-items:center;gap:13px;box-shadow:var(--sh)}
-.cc-ico{width:40px;height:40px;border-radius:9px;background:var(--b5);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
-.cc-val{font-size:22px;font-weight:700;color:var(--b1);font-family:'DM Serif Display',serif}
-.cc-lbl{font-size:11px;color:var(--text4);margin-top:2px;font-weight:500}
+.cc{background:var(--white);border:1px solid var(--border);border-left:4px solid var(--cc,var(--b2));border-radius:var(--r);padding:15px 18px;display:flex;align-items:center;gap:14px;box-shadow:var(--sh)}
+.cc-ico{width:44px;height:44px;border-radius:10px;background:var(--ci,var(--b5));display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.cc-val{font-size:24px;font-weight:700;color:var(--text);font-family:'DM Serif Display',serif}
+.cc-lbl{font-size:10px;font-weight:700;color:var(--text4);margin-top:3px;text-transform:uppercase;letter-spacing:.5px}
+.c1{--cc:#16a34a;--ci:#f0fdf4}.c2{--cc:#d97706;--ci:#fffbeb}.c3{--cc:#dc2626;--ci:#fef2f2}.c4{--cc:#003580;--ci:#edf3ff}
+/* ── Chart Cards ──────────────────────────────────────────────── */
 .ch2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
-.cc2{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:18px;box-shadow:var(--sh)}
-.chd{font-size:13px;font-weight:600;color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:8px}
-.chd-dot{width:8px;height:8px;border-radius:50%;background:var(--b2);flex-shrink:0}
-.chw{position:relative;height:230px}
+.cc2{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:20px;box-shadow:var(--sh);position:relative;overflow:hidden}
+.cc2::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--b1) 0%,var(--b3) 50%,#60a5fa 100%)}
+.chd{font-size:13px;font-weight:700;color:var(--text);margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
+.chd-left{display:flex;align-items:center;gap:8px}
+.chd-dot{width:9px;height:9px;border-radius:50%;background:var(--b2);flex-shrink:0;box-shadow:0 0 0 3px var(--b4)}
+.chd-pill{background:var(--b5);border:1px solid var(--border2);border-radius:20px;padding:2px 9px;font-size:10px;font-weight:700;color:var(--b2);text-transform:uppercase;letter-spacing:.4px}
+.chw{position:relative;height:240px}
 .chw.sm{height:190px}
+/* ── Table ────────────────────────────────────────────────────── */
 .mt{width:100%;border-collapse:collapse;font-size:12.5px}
-.mt th{background:var(--b5);padding:8px 12px;text-align:left;font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border)}
-.mt td{padding:9px 12px;border-bottom:1px solid var(--border2)}
+.mt th{background:linear-gradient(90deg,var(--b5),var(--b6));padding:9px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;border-bottom:2px solid var(--border)}
+.mt td{padding:10px 12px;border-bottom:1px solid var(--border2)}
 .mt tr:last-child td{border-bottom:none}
 .mt tr:hover td{background:var(--b6)}
-.rnk{width:20px;height:20px;background:var(--b1);color:#fff;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700}
-.pt{background:var(--border2);border-radius:3px;height:4px;overflow:hidden;width:80px}
-.pb2{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--b1),var(--b3))}
+.rnk{width:22px;height:22px;background:linear-gradient(135deg,var(--b1),var(--b3));color:#fff;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;box-shadow:0 2px 4px rgba(0,53,128,.2)}
+.pt{background:var(--border2);border-radius:4px;height:5px;overflow:hidden;width:80px}
+.pb2{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--b1),var(--b3))}
 /* CHAT */
 .chat-wrap{display:grid;grid-template-columns:280px 1fr;gap:18px;height:calc(100vh - 160px)}
 .chat-side{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:16px;overflow-y:auto;box-shadow:var(--sh)}
@@ -199,29 +219,46 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
        ═══════════════════════════════════════════════════════════════════ -->
   <div class="view on" id="v-dash">
 
+    <!-- Dashboard Header -->
+    <div class="dash-hdr">
+      <div class="dash-title">
+        🏛️ DSSY Live Analytics Dashboard
+        <span class="live-badge"><span class="live-dot"></span>Live Data</span>
+      </div>
+      <div class="dash-meta">
+        <span class="upd-lbl" id="dashUpd">Loading…</span>
+        <button class="ref-btn" onclick="loadDash()">↻ Refresh</button>
+      </div>
+    </div>
+
     <!-- KPI Row -->
     <div class="kpi-row">
-      <div class="kpi">
+      <div class="kpi k1">
+        <span class="kpi-ico">👥</span>
         <div class="kpi-lbl">Total Beneficiaries</div>
         <div class="kpi-val" id="kT">—</div>
         <div class="kpi-sub">All registered</div>
       </div>
-      <div class="kpi">
+      <div class="kpi k2">
+        <span class="kpi-ico">✅</span>
         <div class="kpi-lbl">Active Beneficiaries</div>
         <div class="kpi-val" id="kA">—</div>
         <div class="kpi-sub" id="kAs">—</div>
       </div>
-      <div class="kpi">
+      <div class="kpi k3">
+        <span class="kpi-ico">💰</span>
         <div class="kpi-lbl">Monthly Payout</div>
         <div class="kpi-val" id="kP">—</div>
         <div class="kpi-sub">Active beneficiaries</div>
       </div>
-      <div class="kpi">
+      <div class="kpi k4">
+        <span class="kpi-ico">⏸️</span>
         <div class="kpi-lbl">Inactive</div>
         <div class="kpi-val" id="kI">—</div>
         <div class="kpi-sub">Enrolled, not receiving</div>
       </div>
-      <div class="kpi">
+      <div class="kpi k5">
+        <span class="kpi-ico">📋</span>
         <div class="kpi-lbl">Deceased</div>
         <div class="kpi-val" id="kN">—</div>
         <div class="kpi-sub">On record</div>
@@ -230,19 +267,19 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
 
     <!-- Payment Compliance Strip -->
     <div class="cstrip">
-      <div class="cc">
+      <div class="cc c1">
         <div class="cc-ico">✅</div>
         <div><div class="cc-val" id="cPd">—</div><div class="cc-lbl">Paid Payments</div></div>
       </div>
-      <div class="cc">
+      <div class="cc c2">
         <div class="cc-ico">⏳</div>
         <div><div class="cc-val" id="cPn">—</div><div class="cc-lbl">Pending</div></div>
       </div>
-      <div class="cc">
+      <div class="cc c3">
         <div class="cc-ico">❌</div>
         <div><div class="cc-val" id="cFl">—</div><div class="cc-lbl">Failed</div></div>
       </div>
-      <div class="cc">
+      <div class="cc c4">
         <div class="cc-ico">📊</div>
         <div><div class="cc-val" id="cCr">—</div><div class="cc-lbl">Compliance Rate</div></div>
       </div>
@@ -251,11 +288,17 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
     <!-- Charts Row 1: Category + Gender -->
     <div class="ch2">
       <div class="cc2">
-        <div class="chd"><span class="chd-dot"></span>Beneficiary Distribution by Category</div>
+        <div class="chd">
+          <div class="chd-left"><span class="chd-dot"></span>Beneficiary Distribution by Category</div>
+          <span class="chd-pill">Active</span>
+        </div>
         <div class="chw"><canvas id="cCat"></canvas></div>
       </div>
       <div class="cc2">
-        <div class="chd"><span class="chd-dot"></span>Gender Distribution (Active)</div>
+        <div class="chd">
+          <div class="chd-left"><span class="chd-dot"></span>Gender Distribution</div>
+          <span class="chd-pill">Active</span>
+        </div>
         <div class="chw"><canvas id="cGen"></canvas></div>
       </div>
     </div>
@@ -263,11 +306,17 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
     <!-- Charts Row 2: District + Registration Trend -->
     <div class="ch2">
       <div class="cc2">
-        <div class="chd"><span class="chd-dot"></span>District-wise Active Beneficiaries</div>
+        <div class="chd">
+          <div class="chd-left"><span class="chd-dot"></span>District-wise Active Beneficiaries</div>
+          <span class="chd-pill">Compare</span>
+        </div>
         <div class="chw"><canvas id="cDist"></canvas></div>
       </div>
       <div class="cc2">
-        <div class="chd"><span class="chd-dot"></span>Registration Trend</div>
+        <div class="chd">
+          <div class="chd-left"><span class="chd-dot"></span>Registration Trend</div>
+          <span class="chd-pill">Timeline</span>
+        </div>
         <div class="chw"><canvas id="cTrend"></canvas></div>
       </div>
     </div>
@@ -275,12 +324,18 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
     <!-- Charts Row 3: Age Distribution + Top Talukas -->
     <div class="ch2">
       <div class="cc2">
-        <div class="chd"><span class="chd-dot"></span>Age Group Distribution (Active)</div>
+        <div class="chd">
+          <div class="chd-left"><span class="chd-dot"></span>Age Group Distribution</div>
+          <span class="chd-pill">Active</span>
+        </div>
         <div class="chw"><canvas id="cAge"></canvas></div>
       </div>
       <div class="cc2">
-        <div class="chd"><span class="chd-dot"></span>Top Talukas by Active Beneficiaries</div>
-        <div style="overflow:auto;max-height:230px">
+        <div class="chd">
+          <div class="chd-left"><span class="chd-dot"></span>Top Talukas by Active Beneficiaries</div>
+          <span class="chd-pill">Top 5</span>
+        </div>
+        <div style="overflow:auto;max-height:240px">
           <table class="mt" id="tTaluka">
             <thead><tr><th>#</th><th>Taluka</th><th>District</th><th>Count</th><th>Share</th></tr></thead>
             <tbody></tbody>
@@ -511,18 +566,58 @@ async function loadDash() {
         <td><div class="pt"><div class="pb2" style="width:${(t.count / mx * 100).toFixed(0)}%"></div></div></td>
       </tr>`).join('');
     }
-  } catch (e) { console.error('Dashboard error:', e); }
+    set('dashUpd', 'Updated ' + new Date().toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'}));
+  } catch (e) { console.error('Dashboard error:', e); set('dashUpd', 'Load failed'); }
 }
 
 // ── CHARTS ────────────────────────────────────────────────────────────────────
-const LOPT = { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { font: { family: 'DM Sans', size: 12 }, padding: 14 } } } };
-const AOPT = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: '#dce8ff' }, ticks: { font: { family: 'DM Sans', size: 11 }, color: '#4a6fa5' } }, y: { grid: { color: '#dce8ff' }, ticks: { font: { family: 'DM Sans', size: 11 }, color: '#4a6fa5' } } } };
+const PAL2 = ['#003580','#1a5dc8','#16a34a','#d97706','#7c3aed','#0891b2','#dc2626','#0f766e'];
+const TOOLTIP = {
+  backgroundColor:'rgba(10,31,68,.92)', titleColor:'#fff', bodyColor:'rgba(255,255,255,.8)',
+  padding:10, cornerRadius:8, borderColor:'rgba(255,255,255,.1)', borderWidth:1,
+  titleFont:{family:'DM Sans',size:12,weight:'700'}, bodyFont:{family:'DM Sans',size:11},
+  callbacks:{ label: ctx => ' ' + Number(ctx.raw).toLocaleString('en-IN') }
+};
+const LOPT = {
+  responsive:true, maintainAspectRatio:false,
+  animation:{ duration:700, easing:'easeOutQuart' },
+  plugins:{
+    legend:{ labels:{ font:{family:'DM Sans',size:12}, padding:16, usePointStyle:true, pointStyle:'circle' } },
+    tooltip: TOOLTIP
+  }
+};
+const AOPT = {
+  responsive:true, maintainAspectRatio:false,
+  animation:{ duration:700, easing:'easeOutQuart' },
+  plugins:{ legend:{ display:false }, tooltip: TOOLTIP },
+  scales:{
+    x:{ grid:{ color:'#edf3ff', drawBorder:false }, ticks:{ font:{family:'DM Sans',size:11}, color:'#4a6fa5', padding:6 }, border:{ display:false } },
+    y:{ grid:{ color:'#edf3ff', drawBorder:false }, ticks:{ font:{family:'DM Sans',size:11}, color:'#4a6fa5', padding:6 }, border:{ display:false } }
+  }
+};
 function kill(id) { if (CI[id]) { CI[id].destroy(); delete CI[id]; } }
-function pie(id, labels, data)  { kill(id); CI[id] = new Chart(qs('#' + id), { type: 'pie',      data: { labels, datasets: [{ data, backgroundColor: PAL, borderWidth: 2, borderColor: '#fff' }] }, options: { ...LOPT, plugins: { ...LOPT.plugins, legend: { ...LOPT.plugins.legend, position: 'right' } } } }); }
-function donut(id, labels, data){ kill(id); CI[id] = new Chart(qs('#' + id), { type: 'doughnut', data: { labels, datasets: [{ data, backgroundColor: PAL, borderWidth: 2, borderColor: '#fff' }] }, options: { ...LOPT, plugins: { ...LOPT.plugins, legend: { ...LOPT.plugins.legend, position: 'right' } } } }); }
-function bar(id, labels, data)  { kill(id); CI[id] = new Chart(qs('#' + id), { type: 'bar',      data: { labels, datasets: [{ data, backgroundColor: '#003580', borderRadius: 6 }] }, options: { ...AOPT } }); }
-function hbar(id, labels, data) { kill(id); CI[id] = new Chart(qs('#' + id), { type: 'bar',      data: { labels, datasets: [{ data, backgroundColor: PAL, borderRadius: 5 }] }, options: { ...AOPT, indexAxis: 'y' } }); }
-function line(id, labels, data) { kill(id); CI[id] = new Chart(qs('#' + id), { type: 'line',     data: { labels, datasets: [{ data, borderColor: '#003580', backgroundColor: 'rgba(0,53,128,.08)', tension: .4, fill: true, pointRadius: 3, pointBackgroundColor: '#003580' }] }, options: { ...AOPT, plugins: { legend: { display: false } } } }); }
+function pie(id, labels, data) {
+  kill(id);
+  CI[id] = new Chart(qs('#'+id), { type:'pie', data:{ labels, datasets:[{ data, backgroundColor:PAL2, borderWidth:3, borderColor:'#fff', hoverOffset:8 }] },
+    options:{ ...LOPT, plugins:{ ...LOPT.plugins, legend:{ ...LOPT.plugins.legend, position:'right' } } } });
+}
+function donut(id, labels, data) {
+  kill(id);
+  CI[id] = new Chart(qs('#'+id), { type:'doughnut', data:{ labels, datasets:[{ data, backgroundColor:PAL2, borderWidth:3, borderColor:'#fff', hoverOffset:8, cutout:'62%' }] },
+    options:{ ...LOPT, plugins:{ ...LOPT.plugins, legend:{ ...LOPT.plugins.legend, position:'right' } } } });
+}
+function bar(id, labels, data) {
+  kill(id);
+  CI[id] = new Chart(qs('#'+id), { type:'bar', data:{ labels, datasets:[{ data, backgroundColor: ctx => { const g = ctx.chart.ctx.createLinearGradient(0,0,0,280); g.addColorStop(0,'#003580'); g.addColorStop(1,'#1a5dc8'); return g; }, borderRadius:6, borderSkipped:false }] }, options:{ ...AOPT } });
+}
+function hbar(id, labels, data) {
+  kill(id);
+  CI[id] = new Chart(qs('#'+id), { type:'bar', data:{ labels, datasets:[{ data, backgroundColor:PAL2, borderRadius:5, borderSkipped:false }] }, options:{ ...AOPT, indexAxis:'y' } });
+}
+function line(id, labels, data) {
+  kill(id);
+  CI[id] = new Chart(qs('#'+id), { type:'line', data:{ labels, datasets:[{ data, borderColor:'#003580', backgroundColor: ctx => { const g = ctx.chart.ctx.createLinearGradient(0,0,0,240); g.addColorStop(0,'rgba(0,53,128,.18)'); g.addColorStop(1,'rgba(0,53,128,0)'); return g; }, tension:.42, fill:true, pointRadius:4, pointBackgroundColor:'#fff', pointBorderColor:'#003580', pointBorderWidth:2, pointHoverRadius:6 }] }, options:{ ...AOPT } });
+}
 
 // ── QUERY CHART ───────────────────────────────────────────────────────────────
 let qIdx = 0;
@@ -705,11 +800,13 @@ async function fetchB(pg) {
 }
 
 // ── NAV ───────────────────────────────────────────────────────────────────────
+let _dashLoaded = false;
 function go(v, tab) {
   qsa('.view').forEach(e => e.classList.remove('on'));
   qsa('.nb').forEach(e => e.classList.remove('on'));
   qs('#v-' + v).classList.add('on');
   if (tab) tab.classList.add('on');
+  if (v === 'dash' && !_dashLoaded) { _dashLoaded = true; loadDash(); }
   if (v === 'bens' && bTotal === 0) fetchB(1);
 }
 
