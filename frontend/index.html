@@ -190,6 +190,19 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
 .seg-btn{padding:6px 16px;border:none;background:#fff;color:var(--b1);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s;white-space:nowrap}
 .seg-btn.active{background:var(--b1);color:#fff}
 .seg-btn:not(:last-child){border-right:1.5px solid var(--b1)}
+/* ── Date Filter Bar ─────────────────────────────────────────── */
+.dfb{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:10px 16px;margin-bottom:16px;box-shadow:var(--sh)}
+.dfb-left{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dfb-lbl{font-size:10px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:.7px;white-space:nowrap}
+.dfb-select{padding:6px 32px 6px 12px;border:1.5px solid var(--border);border-radius:6px;background:var(--b6) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234a6fa5' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 10px center;color:var(--text);font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;outline:none;appearance:none;-webkit-appearance:none;transition:border-color .15s,box-shadow .15s}
+.dfb-select:hover{border-color:var(--b3);background-color:var(--b5)}
+.dfb-select:focus{border-color:var(--b2);box-shadow:0 0 0 3px rgba(0,71,173,.12)}
+.dfb-custom{display:flex;align-items:center;gap:8px}
+.dfb-date{padding:4px 9px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;color:var(--text);background:#fff;outline:none;transition:border-color .15s}
+.dfb-date:focus{border-color:var(--b2)}
+.dfb-sep{color:var(--text4);font-size:13px;font-weight:500}
+.dfb-right{font-size:11.5px;color:var(--text3);font-weight:500;display:flex;align-items:center;gap:7px;flex-shrink:0}
+.dfb-period-pill{background:var(--b5);border:1px solid var(--border2);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;color:var(--b2)}
 </style>
 </head>
 <body>
@@ -236,6 +249,29 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
           <button class="seg-btn active" id="segCharts" onclick="toggleDash('custom')">Charts</button>
           <button class="seg-btn" id="segPBI" onclick="toggleDash('pbi')">Power BI</button>
         </div>
+      </div>
+    </div>
+
+    <div class="dfb">
+      <div class="dfb-left">
+        <span class="dfb-lbl">Period</span>
+        <select class="dfb-select" id="dfbSelect" onchange="setRange(this.value)">
+          <option value="all">All Time</option>
+          <option value="7d">Last 7 Days</option>
+          <option value="30d">Last 30 Days</option>
+          <option value="90d">Last 90 Days</option>
+          <option value="6m">Last 6 Months</option>
+          <option value="1y">Last 1 Year</option>
+          <option value="custom">Custom Range</option>
+        </select>
+        <div class="dfb-custom" id="dfbCustom" style="display:none">
+          <input type="date" id="dfbFrom" class="dfb-date" onchange="applyCustomRange()"/>
+          <span class="dfb-sep">→</span>
+          <input type="date" id="dfbTo"   class="dfb-date" onchange="applyCustomRange()"/>
+        </div>
+      </div>
+      <div class="dfb-right">
+        Showing: <span class="dfb-period-pill" id="dfbPeriod">All Time</span>
       </div>
     </div>
 
@@ -462,6 +498,8 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
 const BASE = '';
 const PAL  = ['#003580','#0047ad','#1a5cbe','#2d72cf','#4289df','#5fa3ec','#8bbff3','#b8d8f8'];
 let CI = {}, bPage = 1, bTotal = 0, sTimer = null, curLang = 'en';
+let _curRange = 'all', _dateFrom = '', _dateTo = '';
+const _RANGE_LABELS = { all:'All Time', '7d':'Last 7 Days', '30d':'Last 30 Days', '90d':'Last 90 Days', '6m':'Last 6 Months', '1y':'Last Year' };
 const PS = 20;
 
 // ── SESSION ID — ties multi-turn queries together for context ──────────────────
@@ -588,16 +626,44 @@ function toggleDash(mode) {
   }
 }
 
+// ── DATE RANGE FILTER ─────────────────────────────────────────────────────────
+function setRange(range) {
+  const customDiv = document.getElementById('dfbCustom');
+  if (range === 'custom') { customDiv.style.display = 'flex'; return; }
+  customDiv.style.display = 'none';
+  _curRange = range; _dateFrom = ''; _dateTo = '';
+  set('dfbPeriod', _RANGE_LABELS[range] || range);
+  loadDash();
+}
+
+function applyCustomRange() {
+  const from = document.getElementById('dfbFrom').value;
+  const to   = document.getElementById('dfbTo').value;
+  if (from && to && from <= to) {
+    _curRange = 'custom'; _dateFrom = from; _dateTo = to;
+    const fmtD = s => s.split('-').reverse().join('/');
+    set('dfbPeriod', fmtD(from) + ' \u2192 ' + fmtD(to));
+    loadDash();
+  }
+}
+
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
 async function loadDash() {
+  let url = `${BASE}/api/analytics/dashboard?range=${_curRange}`;
+  if (_curRange === 'custom' && _dateFrom && _dateTo)
+    url += `&date_from=${_dateFrom}&date_to=${_dateTo}`;
+  set('dashUpd', 'Loading\u2026');
   try {
-    const res = await (await fetch(`${BASE}/api/analytics/dashboard`)).json();
-    if (res.status !== 'ok') return;
+    const res = await (await fetch(url)).json();
+    if (res.status !== 'ok') { set('dashUpd', 'Load failed'); return; }
     const d = res.data;
+    const filtered = _curRange !== 'all';
     set('kT', fmt(d.total_beneficiaries));
     set('kA', fmt(d.active_beneficiaries));
-    set('kAs', ((d.active_beneficiaries / d.total_beneficiaries) * 100).toFixed(1) + '% of total');
-    set('kP', '₹' + fmt(Math.round(d.total_monthly_payout)));
+    set('kAs', filtered
+      ? 'Registered in ' + (_RANGE_LABELS[_curRange] || _curRange).toLowerCase()
+      : ((d.active_beneficiaries / d.total_beneficiaries) * 100).toFixed(1) + '% of total');
+    set('kP', '\u20B9' + fmt(Math.round(d.total_monthly_payout)));
     set('kI', fmt(d.inactive_beneficiaries));
     set('kN', fmt(d.deceased_beneficiaries));
     const pc = d.payment_compliance || {};

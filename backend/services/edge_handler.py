@@ -259,6 +259,43 @@ def detect_edge_case(question: str) -> dict | None:
         if re.search(pattern, ql):
             return {"type": "confused", "response": _RESPONSES["confused"]}
 
+    # ── Meta-conversation passthrough ─────────────────────────
+    # Questions about the conversation itself (context-aware) must reach
+    # resolve_question() — they have no DSSY keywords by nature.
+    _META_CONV = [
+        r"\b(my|your)\s+(first|last|previous|prior|earlier|last)\s+(question|query|message)",
+        r"what\s+did\s+(i|you)\s+(ask|say|answer|tell)",
+        r"what\s+was\s+(my|your|the)\s+(question|answer|response|last|first)",
+        r"(repeat|rephrase|restate)\s+(my|the|that|your)\s+(question|answer)",
+        r"(what|which)\s+(question|thing)\s+did\s+i\s+(ask|say)",
+        r"(summarize|summary)\s+(our|this|the)\s+(conversation|chat|discussion)",
+        r"what\s+have\s+(we|i)\s+(discussed|talked|covered)",
+    ]
+    if any(re.search(p, ql) for p in _META_CONV):
+        return None
+
+    # ── Arithmetic / comparison follow-up passthrough ──────────
+    # Short follow-ups that reference prior answer numbers via pronouns
+    # ("both", "them", "together", "combined") have no DSSY keywords
+    # but must reach resolve_question() to produce coherent answers.
+    _FOLLOWUP = [
+        # Arithmetic on prior numbers
+        r"\b(sum|total|add|plus|combined|combine|altogether)\b.{0,30}\b(both|them|these|those|two|it)\b",
+        r"\b(both|them|these|those)\b.{0,30}\b(sum|total|add|plus|combined|together|altogether)\b",
+        r"(what|how much).{0,20}(together|combined|altogether|in total)\b",
+        r"\b(difference|gap|subtract|minus)\b.{0,30}\b(both|them|these|those|two)\b",
+        # Comparison of prior results
+        r"which\s+(is|one\s+is|are)\s+(more|less|higher|lower|bigger|smaller|greater)\b",
+        r"(more|less|higher|lower|bigger|smaller|greater)\s+(of\s+)?(the\s+)?(two|both|them|these)\b",
+        # Short pronoun-only follow-ups ("what about both?", "and them?")
+        r"^(what\s+about|and|also|plus)\s+(both|them|these|those|it|the\s+other)[\s?]*$",
+        # "now show both", "combine them", "add those up"
+        r"^(now\s+)?(show|give|tell|calculate|compute|find)\s+(me\s+)?(both|them|the\s+total|the\s+sum|the\s+combined)\b",
+        r"^(add|sum|combine|total)\s+(them|both|those|these)\s*(up)?[\s?]*$",
+    ]
+    if any(re.search(p, ql) for p in _FOLLOWUP):
+        return None
+
     # Whitelist: ONLY allow questions related to DSSY context
     # If none of these words are present — it's off-topic, block it
     dssy_words = [
