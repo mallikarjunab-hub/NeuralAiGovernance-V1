@@ -57,7 +57,8 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
 .kpi{background:var(--white);border:1px solid var(--border);border-left:4px solid var(--kc,var(--b2));border-radius:var(--r);padding:18px 20px 16px;box-shadow:var(--sh);position:relative;overflow:hidden;transition:transform .18s,box-shadow .18s}
 .kpi:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(0,53,128,.13)}
 .kpi::after{content:'';position:absolute;top:-20px;right:-20px;width:90px;height:90px;border-radius:50%;background:var(--kc,var(--b2));opacity:.05;pointer-events:none}
-.kpi-ico{font-size:20px;margin-bottom:10px;display:block;line-height:1}
+.kpi-ico{width:36px;height:36px;margin-bottom:12px;display:block;color:var(--kc,var(--b1));opacity:.9}
+.kpi-ico svg{width:100%;height:100%;stroke:currentColor;fill:none}
 .kpi-lbl{font-size:10px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:.8px;margin-bottom:7px}
 .kpi-val{font-size:32px;font-weight:700;color:var(--text);line-height:1;margin-bottom:5px;font-family:'DM Serif Display',serif}
 .kpi-sub{font-size:11px;color:var(--text3)}
@@ -65,7 +66,8 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
 /* ── Compliance Strip ─────────────────────────────────────────── */
 .cstrip{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
 .cc{background:var(--white);border:1px solid var(--border);border-left:4px solid var(--cc,var(--b2));border-radius:var(--r);padding:15px 18px;display:flex;align-items:center;gap:14px;box-shadow:var(--sh)}
-.cc-ico{width:44px;height:44px;border-radius:10px;background:var(--ci,var(--b5));display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.cc-ico{width:40px;height:40px;border-radius:10px;background:var(--ci,var(--b5));display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff}
+.cc-ico svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2}
 .cc-val{font-size:24px;font-weight:700;color:var(--text);font-family:'DM Serif Display',serif}
 .cc-lbl{font-size:10px;font-weight:700;color:var(--text4);margin-top:3px;text-transform:uppercase;letter-spacing:.5px}
 .c1{--cc:#16a34a;--ci:#f0fdf4}.c2{--cc:#d97706;--ci:#fffbeb}.c3{--cc:#dc2626;--ci:#fef2f2}.c4{--cc:#003580;--ci:#edf3ff}
@@ -182,6 +184,12 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
 .pb:disabled{opacity:.4;cursor:not-allowed}
 @media(max-width:1100px){.kpi-row{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:800px){.ch2{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr 1fr}.cstrip{grid-template-columns:1fr 1fr}.chat-wrap{grid-template-columns:1fr}.chat-side{display:none}.main{padding:14px}}
+.pbi-wrap{width:100%;height:calc(100vh - 160px);border-radius:12px;overflow:hidden;border:1px solid #c7d9f5;background:#fff;box-shadow:0 1px 4px rgba(0,53,128,.08),0 4px 16px rgba(0,53,128,.06)}
+.pbi-wrap iframe{width:100%;height:calc(100% + 52px);margin-top:-8px;border:none;display:block}
+.dash-seg{display:flex;border:1.5px solid var(--b1);border-radius:8px;overflow:hidden;flex-shrink:0}
+.seg-btn{padding:6px 16px;border:none;background:#fff;color:var(--b1);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s;white-space:nowrap}
+.seg-btn.active{background:var(--b1);color:#fff}
+.seg-btn:not(:last-child){border-right:1.5px solid var(--b1)}
 </style>
 </head>
 <body>
@@ -213,13 +221,9 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
 
 <div class="main">
 
-  <!-- ═══════════════════════════════════════════════════════════════════
-       DASHBOARD — VERSION A : Custom Chart.js  (CURRENTLY ACTIVE)
-       To switch to Power BI → add  style="display:none"  to the div below
-       ═══════════════════════════════════════════════════════════════════ -->
   <div class="view on" id="v-dash">
 
-    <!-- Dashboard Header -->
+    <div id="dash-custom">
     <div class="dash-hdr">
       <div class="dash-title">
         🏛️ DSSY Live Analytics Dashboard
@@ -228,64 +232,65 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
       <div class="dash-meta">
         <span class="upd-lbl" id="dashUpd">Loading…</span>
         <button class="ref-btn" onclick="loadDash()">↻ Refresh</button>
+        <div class="dash-seg">
+          <button class="seg-btn active" id="segCharts" onclick="toggleDash('custom')">Charts</button>
+          <button class="seg-btn" id="segPBI" onclick="toggleDash('pbi')">Power BI</button>
+        </div>
       </div>
     </div>
 
-    <!-- KPI Row -->
     <div class="kpi-row">
       <div class="kpi k1">
-        <span class="kpi-ico">👥</span>
+        <span class="kpi-ico"><svg viewBox="0 0 24 24" stroke-width="1.7"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
         <div class="kpi-lbl">Total Beneficiaries</div>
         <div class="kpi-val" id="kT">—</div>
         <div class="kpi-sub">All registered</div>
       </div>
       <div class="kpi k2">
-        <span class="kpi-ico">✅</span>
+        <span class="kpi-ico"><svg viewBox="0 0 24 24" stroke-width="1.7"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span>
         <div class="kpi-lbl">Active Beneficiaries</div>
         <div class="kpi-val" id="kA">—</div>
         <div class="kpi-sub" id="kAs">—</div>
       </div>
       <div class="kpi k3">
-        <span class="kpi-ico">💰</span>
+        <span class="kpi-ico"><svg viewBox="0 0 24 24" stroke-width="1.7"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg></span>
         <div class="kpi-lbl">Monthly Payout</div>
         <div class="kpi-val" id="kP">—</div>
         <div class="kpi-sub">Active beneficiaries</div>
       </div>
       <div class="kpi k4">
-        <span class="kpi-ico">⏸️</span>
+        <span class="kpi-ico"><svg viewBox="0 0 24 24" stroke-width="1.7"><circle cx="12" cy="12" r="10"/><line x1="10" y1="15" x2="10" y2="9"/><line x1="14" y1="15" x2="14" y2="9"/></svg></span>
         <div class="kpi-lbl">Inactive</div>
         <div class="kpi-val" id="kI">—</div>
         <div class="kpi-sub">Enrolled, not receiving</div>
       </div>
       <div class="kpi k5">
-        <span class="kpi-ico">📋</span>
+        <span class="kpi-ico"><svg viewBox="0 0 24 24" stroke-width="1.7"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
         <div class="kpi-lbl">Deceased</div>
         <div class="kpi-val" id="kN">—</div>
         <div class="kpi-sub">On record</div>
       </div>
     </div>
 
-    <!-- Payment Compliance Strip -->
     <div class="cstrip">
       <div class="cc c1">
-        <div class="cc-ico">✅</div>
+        <div class="cc-ico"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
         <div><div class="cc-val" id="cPd">—</div><div class="cc-lbl">Paid Payments</div></div>
       </div>
       <div class="cc c2">
-        <div class="cc-ico">⏳</div>
+        <div class="cc-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
         <div><div class="cc-val" id="cPn">—</div><div class="cc-lbl">Pending</div></div>
       </div>
       <div class="cc c3">
-        <div class="cc-ico">❌</div>
+        <div class="cc-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div>
         <div><div class="cc-val" id="cFl">—</div><div class="cc-lbl">Failed</div></div>
       </div>
       <div class="cc c4">
-        <div class="cc-ico">📊</div>
+        <div class="cc-ico"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
         <div><div class="cc-val" id="cCr">—</div><div class="cc-lbl">Compliance Rate</div></div>
       </div>
     </div>
 
-    <!-- Charts Row 1: Category + Gender -->
     <div class="ch2">
       <div class="cc2">
         <div class="chd">
@@ -303,7 +308,6 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
       </div>
     </div>
 
-    <!-- Charts Row 2: District + Registration Trend -->
     <div class="ch2">
       <div class="cc2">
         <div class="chd">
@@ -321,7 +325,6 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
       </div>
     </div>
 
-    <!-- Charts Row 3: Age Distribution + Top Talukas -->
     <div class="ch2">
       <div class="cc2">
         <div class="chd">
@@ -344,10 +347,32 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
       </div>
     </div>
 
-  </div>
-  <!-- ═══════════════════════════════════════════════════════════════════
-       END VERSION A
-       ═══════════════════════════════════════════════════════════════════ -->
+    </div><!-- end dash-custom -->
+
+    <div id="dash-pbi" style="display:none">
+      <div class="dash-hdr">
+        <div class="dash-title">
+          📊 DSSY Power BI Dashboard
+          <span class="live-badge"><span class="live-dot"></span>Live</span>
+        </div>
+        <div class="dash-meta">
+          <div class="dash-seg">
+            <button class="seg-btn active" id="segCharts2" onclick="toggleDash('custom')">Charts</button>
+            <button class="seg-btn" id="segPBI2" onclick="toggleDash('pbi')">Power BI</button>
+          </div>
+        </div>
+      </div>
+      <div class="pbi-wrap">
+        <iframe
+          id="pbiFrame"
+          title="neural_poc_final"
+          data-src="https://app.powerbi.com/view?r=eyJrIjoiNWEzZGYwOWItNGY2NS00ODhkLWJlYzItZDI3YzY3ZDQ1ZWJkIiwidCI6IjhlNDU1OTYxLTRiZjMtNGYwMi05M2Q0LWE2NzFmMmYxMWNmOSJ9"
+          frameborder="0" allowFullScreen="true">
+        </iframe>
+      </div>
+    </div><!-- end dash-pbi -->
+
+  </div><!-- end v-dash -->
 
   <!-- CHAT -->
   <div class="view" id="v-chat">
@@ -435,9 +460,20 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
 
 <script>
 const BASE = '';
-const PAL  = ['#003580','#0047ad','#1a5dc8','#3b82f6','#60a5fa','#93c5fd','#bfdbfe','#dbeafe'];
+const PAL  = ['#003580','#0047ad','#1a5cbe','#2d72cf','#4289df','#5fa3ec','#8bbff3','#b8d8f8'];
 let CI = {}, bPage = 1, bTotal = 0, sTimer = null, curLang = 'en';
 const PS = 20;
+
+// ── SESSION ID — ties multi-turn queries together for context ──────────────────
+// Persisted in sessionStorage so context resets on new tab/window but not on reload.
+function _genSessionId() {
+  return 'sess_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+}
+const SESSION_ID = (() => {
+  let id = sessionStorage.getItem('dssy_session_id');
+  if (!id) { id = _genSessionId(); sessionStorage.setItem('dssy_session_id', id); }
+  return id;
+})();
 
 // ── LANGUAGE ──────────────────────────────────────────────────────────────────
 const LANG_LABELS = { en:'EN', hi:'हिंदी', te:'తెలుగు' };
@@ -522,6 +558,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadSugs();
   setupInput();
   addWelcome();
+  _dashLoaded = true;  // mark so go('dash') won't double-load
+  loadDash();          // load charts immediately on page open
 });
 
 // ── HEALTH ────────────────────────────────────────────────────────────────────
@@ -534,6 +572,20 @@ async function chkHealth() {
     const neon = d.neon_pgvector === 'connected' ? '✓' : '✗';
     qs('#sLbl').textContent = ok ? 'System Online' : `Degraded (BQ:${bq} RAG:${neon})`;
   } catch { qs('#sDot').className = 'dot err'; qs('#sLbl').textContent = 'Offline'; }
+}
+
+// ── DASHBOARD TOGGLE ──────────────────────────────────────────────────────────
+function toggleDash(mode) {
+  const showPBI = mode === 'pbi';
+  document.getElementById('dash-custom').style.display = showPBI ? 'none' : '';
+  document.getElementById('dash-pbi').style.display    = showPBI ? ''     : 'none';
+  ['segCharts','segCharts2'].forEach(id => { const el = document.getElementById(id); if(el) el.classList.toggle('active', !showPBI); });
+  ['segPBI','segPBI2'].forEach(id     => { const el = document.getElementById(id); if(el) el.classList.toggle('active',  showPBI); });
+  // Load Power BI iframe src on first click only
+  if (showPBI) {
+    const fr = document.getElementById('pbiFrame');
+    if (fr && !fr.src) fr.src = fr.dataset.src;
+  }
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
@@ -571,52 +623,59 @@ async function loadDash() {
 }
 
 // ── CHARTS ────────────────────────────────────────────────────────────────────
-const PAL2 = ['#003580','#1a5dc8','#16a34a','#d97706','#7c3aed','#0891b2','#dc2626','#0f766e'];
+// Professional government blue palette — monochromatic, no mixed colours
+const PAL2 = ['#003580','#0047ad','#1a5cbe','#2d72cf','#4289df','#5fa3ec','#8bbff3','#b8d8f8'];
 const TOOLTIP = {
-  backgroundColor:'rgba(10,31,68,.92)', titleColor:'#fff', bodyColor:'rgba(255,255,255,.8)',
-  padding:10, cornerRadius:8, borderColor:'rgba(255,255,255,.1)', borderWidth:1,
-  titleFont:{family:'DM Sans',size:12,weight:'700'}, bodyFont:{family:'DM Sans',size:11},
-  callbacks:{ label: ctx => ' ' + Number(ctx.raw).toLocaleString('en-IN') }
+  backgroundColor:'rgba(0,30,80,.95)', titleColor:'#e8f0fe', bodyColor:'rgba(232,240,254,.85)',
+  padding:12, cornerRadius:6, borderColor:'rgba(255,255,255,.12)', borderWidth:1,
+  titleFont:{family:'DM Sans',size:12,weight:'700'}, bodyFont:{family:'DM Sans',size:12},
+  callbacks:{ label: ctx => '  ' + Number(ctx.raw).toLocaleString('en-IN') }
 };
 const LOPT = {
   responsive:true, maintainAspectRatio:false,
-  animation:{ duration:700, easing:'easeOutQuart' },
+  animation:{ duration:600, easing:'easeOutQuart' },
   plugins:{
-    legend:{ labels:{ font:{family:'DM Sans',size:12}, padding:16, usePointStyle:true, pointStyle:'circle' } },
+    legend:{ labels:{ font:{family:'DM Sans',size:12,weight:'500'}, padding:18, usePointStyle:true, pointStyle:'circle', color:'#1e3a6e' } },
     tooltip: TOOLTIP
   }
 };
 const AOPT = {
   responsive:true, maintainAspectRatio:false,
-  animation:{ duration:700, easing:'easeOutQuart' },
+  animation:{ duration:600, easing:'easeOutQuart' },
   plugins:{ legend:{ display:false }, tooltip: TOOLTIP },
   scales:{
-    x:{ grid:{ color:'#edf3ff', drawBorder:false }, ticks:{ font:{family:'DM Sans',size:11}, color:'#4a6fa5', padding:6 }, border:{ display:false } },
-    y:{ grid:{ color:'#edf3ff', drawBorder:false }, ticks:{ font:{family:'DM Sans',size:11}, color:'#4a6fa5', padding:6 }, border:{ display:false } }
+    x:{ grid:{ color:'rgba(0,53,128,.06)', drawBorder:false }, ticks:{ font:{family:'DM Sans',size:11,weight:'500'}, color:'#3a5a9a', padding:8 }, border:{ display:false } },
+    y:{ grid:{ color:'rgba(0,53,128,.06)', drawBorder:false }, ticks:{ font:{family:'DM Sans',size:11,weight:'500'}, color:'#3a5a9a', padding:8 }, border:{ display:false } }
   }
 };
 function kill(id) { if (CI[id]) { CI[id].destroy(); delete CI[id]; } }
 function pie(id, labels, data) {
   kill(id);
-  CI[id] = new Chart(qs('#'+id), { type:'pie', data:{ labels, datasets:[{ data, backgroundColor:PAL2, borderWidth:3, borderColor:'#fff', hoverOffset:8 }] },
+  CI[id] = new Chart(qs('#'+id), { type:'pie', data:{ labels, datasets:[{ data, backgroundColor:PAL2, borderWidth:2, borderColor:'#fff', hoverOffset:10 }] },
     options:{ ...LOPT, plugins:{ ...LOPT.plugins, legend:{ ...LOPT.plugins.legend, position:'right' } } } });
 }
 function donut(id, labels, data) {
   kill(id);
-  CI[id] = new Chart(qs('#'+id), { type:'doughnut', data:{ labels, datasets:[{ data, backgroundColor:PAL2, borderWidth:3, borderColor:'#fff', hoverOffset:8, cutout:'62%' }] },
+  CI[id] = new Chart(qs('#'+id), { type:'doughnut', data:{ labels, datasets:[{ data, backgroundColor:PAL2, borderWidth:2, borderColor:'#fff', hoverOffset:10, cutout:'65%' }] },
     options:{ ...LOPT, plugins:{ ...LOPT.plugins, legend:{ ...LOPT.plugins.legend, position:'right' } } } });
 }
 function bar(id, labels, data) {
   kill(id);
-  CI[id] = new Chart(qs('#'+id), { type:'bar', data:{ labels, datasets:[{ data, backgroundColor: ctx => { const g = ctx.chart.ctx.createLinearGradient(0,0,0,280); g.addColorStop(0,'#003580'); g.addColorStop(1,'#1a5dc8'); return g; }, borderRadius:6, borderSkipped:false }] }, options:{ ...AOPT } });
+  CI[id] = new Chart(qs('#'+id), { type:'bar', data:{ labels, datasets:[{ data,
+    backgroundColor: ctx => { const g = ctx.chart.ctx.createLinearGradient(0,0,0,260); g.addColorStop(0,'#003580'); g.addColorStop(1,'#2d72cf'); return g; },
+    borderRadius:5, borderSkipped:false, borderWidth:0 }] }, options:{ ...AOPT } });
 }
 function hbar(id, labels, data) {
   kill(id);
-  CI[id] = new Chart(qs('#'+id), { type:'bar', data:{ labels, datasets:[{ data, backgroundColor:PAL2, borderRadius:5, borderSkipped:false }] }, options:{ ...AOPT, indexAxis:'y' } });
+  const bgs = data.map((_,i) => PAL2[i % PAL2.length]);
+  CI[id] = new Chart(qs('#'+id), { type:'bar', data:{ labels, datasets:[{ data, backgroundColor:bgs, borderRadius:4, borderSkipped:false, borderWidth:0 }] }, options:{ ...AOPT, indexAxis:'y' } });
 }
 function line(id, labels, data) {
   kill(id);
-  CI[id] = new Chart(qs('#'+id), { type:'line', data:{ labels, datasets:[{ data, borderColor:'#003580', backgroundColor: ctx => { const g = ctx.chart.ctx.createLinearGradient(0,0,0,240); g.addColorStop(0,'rgba(0,53,128,.18)'); g.addColorStop(1,'rgba(0,53,128,0)'); return g; }, tension:.42, fill:true, pointRadius:4, pointBackgroundColor:'#fff', pointBorderColor:'#003580', pointBorderWidth:2, pointHoverRadius:6 }] }, options:{ ...AOPT } });
+  CI[id] = new Chart(qs('#'+id), { type:'line', data:{ labels, datasets:[{ data,
+    borderColor:'#003580', borderWidth:2.5,
+    backgroundColor: ctx => { const g = ctx.chart.ctx.createLinearGradient(0,0,0,220); g.addColorStop(0,'rgba(0,53,128,.15)'); g.addColorStop(1,'rgba(0,53,128,.01)'); return g; },
+    tension:.4, fill:true, pointRadius:4, pointBackgroundColor:'#fff', pointBorderColor:'#003580', pointBorderWidth:2, pointHoverRadius:6, pointHoverBackgroundColor:'#003580' }] }, options:{ ...AOPT } });
 }
 
 // ── QUERY CHART ───────────────────────────────────────────────────────────────
@@ -649,9 +708,9 @@ function buildQueryChart(data, cid) {
 function rQC(cid, type) {
   const { labels, values } = window._QD[cid]; kill(cid);
   const cv = document.getElementById(cid); if (!cv) return;
-  if (type === 'bar')     CI[cid] = new Chart(cv, { type:'bar',      data:{labels,datasets:[{data:values,backgroundColor:'#003580',borderRadius:6}]}, options:{...AOPT} });
-  else if(type==='doughnut') CI[cid] = new Chart(cv, { type:'doughnut', data:{labels,datasets:[{data:values,backgroundColor:PAL,borderWidth:2,borderColor:'#fff'}]}, options:{...LOPT,plugins:{...LOPT.plugins,legend:{labels:{font:{family:'DM Sans',size:11}},position:'right'}}} });
-  else CI[cid] = new Chart(cv, { type:'line', data:{labels,datasets:[{data:values,borderColor:'#0047ad',backgroundColor:'rgba(0,71,173,.08)',tension:.4,fill:true,pointRadius:3,pointBackgroundColor:'#0047ad'}]}, options:{...AOPT,plugins:{legend:{display:false}}} });
+  if (type === 'bar')     CI[cid] = new Chart(cv, { type:'bar',      data:{labels,datasets:[{data:values,backgroundColor: ctx=>{const g=ctx.chart.ctx.createLinearGradient(0,0,0,220);g.addColorStop(0,'#003580');g.addColorStop(1,'#2d72cf');return g;},borderRadius:5,borderWidth:0}]}, options:{...AOPT} });
+  else if(type==='doughnut') CI[cid] = new Chart(cv, { type:'doughnut', data:{labels,datasets:[{data:values,backgroundColor:PAL2,borderWidth:2,borderColor:'#fff',cutout:'65%'}]}, options:{...LOPT,plugins:{...LOPT.plugins,legend:{...LOPT.plugins.legend,position:'right'}}} });
+  else CI[cid] = new Chart(cv, { type:'line', data:{labels,datasets:[{data:values,borderColor:'#003580',borderWidth:2.5,backgroundColor:'rgba(0,53,128,.10)',tension:.4,fill:true,pointRadius:4,pointBackgroundColor:'#fff',pointBorderColor:'#003580',pointBorderWidth:2}]}, options:{...AOPT,plugins:{legend:{display:false}}} });
 }
 function swQC(cid, type, btn) { btn.closest('.qctog').querySelectorAll('.ctb').forEach(b=>b.classList.remove('on')); btn.classList.add('on'); rQC(cid,type); }
 
@@ -701,7 +760,7 @@ async function doSend() {
     const r = await fetch(`${BASE}/api/query`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question: q, language: curLang, include_sql: false }),
+      body: JSON.stringify({ question: q, language: curLang, include_sql: false, session_id: SESSION_ID }),
       signal: controller.signal
     });
     clearTimeout(timeoutId);
@@ -822,39 +881,3 @@ const qsa = s => document.querySelectorAll(s);
 </body>
 </html>
 
-<!--
-  ═══════════════════════════════════════════════════════════════════════════
-  DASHBOARD — VERSION B : Power BI Embed  (CURRENTLY INACTIVE)
-
-  HOW TO ACTIVATE POWER BI (2 steps):
-    1. Find the VERSION A div above → add  style="display:none"  to it:
-         <div class="view on" id="v-dash" style="display:none">
-
-    2. Remove the opening "<!--" and closing "-->" around this entire block.
-
-  HOW TO GO BACK TO CUSTOM (2 steps):
-    1. Remove  style="display:none"  from the VERSION A div above.
-    2. Re-wrap this block in "<!--" and "-->".
-  ═══════════════════════════════════════════════════════════════════════════
-
-  <style>
-    .pbi-wrap { width:100%; height:calc(100vh - 130px); border-radius:12px;
-                overflow:hidden; border:1px solid #c7d9f5; background:#fff;
-                box-shadow:0 1px 4px rgba(0,53,128,.08),0 4px 16px rgba(0,53,128,.06); }
-    .pbi-wrap iframe { width:100%; height:100%; border:none; display:block; }
-  </style>
-
-  <div class="view on" id="v-dash">
-    <div class="pbi-wrap">
-      <iframe
-        src="https://app.powerbi.com/view?r=eyJrIjoiNWEzZGYwOWItNGY2NS00ODhkLWJlYzItZDI3YzY3ZDQ1ZWJkIiwidCI6IjhlNDU1OTYxLTRiZjMtNGYwMi05M2Q0LWE2NzFmMmYxMWNmOSJ9"
-        allowfullscreen
-        allow="fullscreen"
-        frameborder="0"
-        loading="lazy"
-        title="DSSY Power BI Dashboard — Department of Social Welfare, Govt. of Goa">
-      </iframe>
-    </div>
-  </div>
-
--->

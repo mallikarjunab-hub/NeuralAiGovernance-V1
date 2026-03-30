@@ -19,8 +19,8 @@ class Settings(BaseSettings):
 
     # ── Neon PostgreSQL (RAG only) ─────────────────────────────
     NEON_DATABASE_URL:  str = ""          # postgresql+asyncpg://...neon.tech/...
-    NEON_POOL_SIZE:     int = 3
-    NEON_MAX_OVERFLOW:  int = 5
+    NEON_POOL_SIZE:     int = 2
+    NEON_MAX_OVERFLOW:  int = 2
 
     # ── Gemini AI ──────────────────────────────────────────────
     GEMINI_API_KEY: str = ""

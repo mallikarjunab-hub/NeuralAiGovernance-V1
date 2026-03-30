@@ -20,6 +20,7 @@ from backend.database import (
 from backend.services.cache import check_health as cache_ok
 from backend.services.gemini_service import check_health as gemini_ok
 from backend.services.rag_service import setup, is_ingested, ingest
+from backend.services.context_store import context_store
 from backend.routers.query         import router as query_router
 from backend.routers.analytics     import router as analytics_router
 from backend.routers.beneficiaries import router as beneficiaries_router
@@ -52,7 +53,7 @@ async def lifespan(app: FastAPI):
     # ── Neon health check + RAG setup ─────────────────────────
     neon_ok = False
     if settings.NEON_DATABASE_URL:
-        neon_ok = await wake_neon(retries=3, delay=2.0)
+        neon_ok = await wake_neon(retries=5, delay=3.0)   # 15s window for cold start
         logger.info(f"{'✅' if neon_ok else '⚠️ '} Neon pgvector {'connected' if neon_ok else 'FAILED — check NEON_DATABASE_URL'}")
 
         if neon_ok:
@@ -60,6 +61,13 @@ async def lifespan(app: FastAPI):
                 try:
                     await setup(db)
                     logger.info("✅ pgvector ready")
+
+                    # Context table for multi-turn conversation persistence
+                    try:
+                        await context_store.setup(db)
+                        logger.info("✅ Conversation context table ready")
+                    except Exception as ce:
+                        logger.warning(f"⚠️  Context table setup failed (non-fatal): {ce}")
 
                     if not await is_ingested(db, "DSSY_Knowledge_Base"):
                         if os.path.exists(_KB):

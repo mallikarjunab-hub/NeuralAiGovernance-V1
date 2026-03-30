@@ -108,10 +108,12 @@ def _fix_neon(url: str) -> str:
         url = url.replace("postgres://", "postgresql://", 1)
     if "?" in url:
         base, params = url.split("?", 1)
-        keep = [p for p in params.split("&") if not any(k in p for k in ["channel_binding"])]
+        keep = [p for p in params.split("&") if not any(k in p for k in ["channel_binding", "connect_timeout"])]
         url = base + ("?" + "&".join(keep) if keep else "")
     if "sslmode" not in url:
         url += ("&" if "?" in url else "?") + "sslmode=require"
+    # Give Neon 10 s to wake from auto-suspend before timing out
+    url += "&connect_timeout=10"
     return url
 
 def _init_neon():
@@ -124,6 +126,8 @@ def _init_neon():
             pool_size=settings.NEON_POOL_SIZE,
             max_overflow=settings.NEON_MAX_OVERFLOW,
             pool_pre_ping=True,
+            pool_timeout=15,        # wait up to 15s for a connection from pool
+            pool_recycle=300,       # recycle connections every 5 min (before Neon kills idle ones)
             echo=settings.DEBUG,
         )
         _NeonSessionFactory = sessionmaker(bind=_neon_engine, autocommit=False, autoflush=False)

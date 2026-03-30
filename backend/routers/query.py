@@ -4,7 +4,14 @@
   2. SQL   : data question → Gemini generates BigQuery SQL → execute → NL answer + chart
   3. RAG   : scheme knowledge → Neon pgvector hybrid search → Gemini answer from DSSY docs
 
-Smart fallback: SQL fail → try RAG. RAG low confidence → try SQL.
+Multi-turn conversation:
+  - session_id ties requests together across a browser session
+  - Each question is first resolved into a standalone question using prior context
+    ("what about inactive?" → "How many inactive beneficiaries are there?")
+  - Resolved question + raw SQL data is stored per turn so arithmetic follow-ups
+    ("sum of active and inactive?") produce correct, coherent answers
+
+Smart fallback: SQL fail → try RAG.  RAG low confidence → try SQL.
 """
 import time, logging
 from fastapi import APIRouter, HTTPException
@@ -13,17 +20,22 @@ from backend.database import execute_bq_query, neon_session_context
 from backend.schemas import QueryRequest, QueryResponse
 from backend.services.edge_handler import detect_edge_case
 from backend.services.gemini_service import (
+    resolve_question,
     classify_intent, generate_sql, generate_nl_answer,
     rag_answer, validate_sql, suggest_chart,
 )
 from backend.services.rag_service import search as rag_search
 from backend.services.cache import get_cached, set_cached
+from backend.services.context_store import context_store
 
 router = APIRouter(prefix="/api/query", tags=["Query"])
 logger = logging.getLogger(__name__)
 
 
-async def _try_rag(question: str, language: str, start: float) -> QueryResponse | None:
+# ── RAG helper ────────────────────────────────────────────────────────────────
+
+async def _try_rag(question: str, language: str, start: float,
+                   context=None) -> QueryResponse | None:
     """Attempt RAG search on Neon. Returns QueryResponse if good match, else None."""
     try:
         async with neon_session_context() as neon_db:
@@ -31,12 +43,13 @@ async def _try_rag(question: str, language: str, start: float) -> QueryResponse 
             relevant = [c for c in chunks if c["similarity"] >= 0.18] or chunks[:3]
             if not relevant:
                 return None
-            answer = await rag_answer(question, [c["text"] for c in relevant], language)
+            answer = await rag_answer(question, [c["text"] for c in relevant], language, context)
             if "not available" in answer.lower() and relevant[0]["similarity"] < 0.22:
                 return None
             return QueryResponse(
                 question=question, answer=answer, intent="RAG",
-                row_count=0, execution_time_ms=int((time.time() - start) * 1000),
+                row_count=0,
+                execution_time_ms=int((time.time() - start) * 1000),
                 confidence="high" if relevant[0]["similarity"] > 0.60 else "medium",
             )
     except Exception as e:
@@ -44,14 +57,23 @@ async def _try_rag(question: str, language: str, start: float) -> QueryResponse 
         return None
 
 
+# ── Main query endpoint ───────────────────────────────────────────────────────
+
 @router.post("", response_model=QueryResponse)
 async def query(req: QueryRequest):
     start = time.time()
+
+    # ── Load conversation context for this session ────────────
+    ctx = await context_store.get_context(req.session_id) if req.session_id else []
 
     # ── Step 1: Edge Case Check (FREE — no API call) ──────────
     edge = detect_edge_case(req.question)
     if edge:
         logger.info(f"Edge case: {edge['type']} | Q: {req.question[:60]}")
+        await context_store.add_turn(
+            req.session_id, req.question, req.question,
+            edge["response"], "EDGE",
+        )
         return QueryResponse(
             question=req.question,
             answer=edge["response"],
@@ -62,52 +84,78 @@ async def query(req: QueryRequest):
             confidence="high",
         )
 
-    # ── Step 2: Classify Intent via Gemini ────────────────────
-    intent = await classify_intent(req.question)
-    logger.info(f"Intent: {intent} | Q: {req.question[:80]}")
+    # ── Step 2: Resolve follow-up questions (multi-turn core) ─
+    # "what about inactive?" → "How many inactive beneficiaries are there?"
+    # "sum of active and inactive?" → "What is the combined total of active and inactive beneficiaries?"
+    resolved = await resolve_question(req.question, ctx)
+    if resolved != req.question:
+        logger.info(f"Resolved: '{req.question[:60]}' → '{resolved[:80]}'")
 
-    # ── Step 3a: RAG Path ─────────────────────────────────────
+    # ── Step 3: Classify Intent via Gemini ────────────────────
+    intent = await classify_intent(resolved, ctx)
+    logger.info(f"Intent: {intent} | Q: {resolved[:80]}")
+
+    # ── Step 4a: RAG Path ─────────────────────────────────────
     if intent == "RAG":
-        rag_result = await _try_rag(req.question, req.language, start)
+        rag_result = await _try_rag(resolved, req.language, start, ctx)
         if rag_result:
+            await context_store.add_turn(
+                req.session_id, req.question, resolved,
+                rag_result.answer, "RAG",
+            )
             return rag_result
+        fallback = (
+            "Thank you for your question. I was unable to find specific information "
+            "about this in the DSSY knowledge base. You may contact the Directorate "
+            "of Social Welfare, Government of Goa at https://socialwelfare.goa.gov.in "
+            "for detailed assistance."
+        )
+        await context_store.add_turn(req.session_id, req.question, resolved, fallback, "RAG")
         return QueryResponse(
-            question=req.question, intent="RAG",
-            answer=(
-                "Thank you for your question. I was unable to find specific information "
-                "about this in the DSSY knowledge base. You may contact the Directorate "
-                "of Social Welfare, Government of Goa at https://socialwelfare.goa.gov.in "
-                "for detailed assistance."
-            ),
+            question=req.question, intent="RAG", answer=fallback,
             row_count=0,
             execution_time_ms=int((time.time() - start) * 1000),
             confidence="low",
         )
 
-    # ── Step 3b: SQL Path (BigQuery) ──────────────────────────
-    cached = await get_cached(req.question)
+    # ── Step 4b: SQL Path (BigQuery) ──────────────────────────
+    # Cache key uses the RESOLVED question so "what about inactive?" hits
+    # the same cache as "How many inactive beneficiaries are there?"
+    cached = await get_cached(resolved)
     if cached:
-        cached["intent"] = "SQL"
+        cached["intent"]    = "SQL"
+        cached["question"]  = req.question  # always reflect what the user actually typed
         if not req.include_sql:
             cached.pop("sql_query", None)
+        # Save to context so follow-ups work even on cache hits
+        await context_store.add_turn(
+            req.session_id, req.question, resolved,
+            cached.get("answer", ""), "SQL",
+            sql_data=cached.get("data"),
+        )
         return QueryResponse(**cached)
 
     try:
-        sql, conf = await generate_sql(req.question)
+        sql, conf = await generate_sql(resolved, ctx)
 
         # SQL cannot answer → fallback to RAG
         if "CANNOT_ANSWER" in sql:
-            rag_result = await _try_rag(req.question, req.language, start)
+            rag_result = await _try_rag(resolved, req.language, start, ctx)
             if rag_result:
+                await context_store.add_turn(
+                    req.session_id, req.question, resolved,
+                    rag_result.answer, "RAG",
+                )
                 return rag_result
+            fallback = (
+                "This information is not available in the DSSY beneficiary database "
+                "or scheme knowledge base. You can ask about beneficiary statistics, "
+                "district/taluka distribution, payment status, scheme eligibility, "
+                "or application procedures."
+            )
+            await context_store.add_turn(req.session_id, req.question, resolved, fallback, "RAG")
             return QueryResponse(
-                question=req.question, intent="RAG",
-                answer=(
-                    "This information is not available in the DSSY beneficiary database "
-                    "or scheme knowledge base. You can ask about beneficiary statistics, "
-                    "district/taluka distribution, payment status, scheme eligibility, "
-                    "or application procedures."
-                ),
+                question=req.question, intent="RAG", answer=fallback,
                 row_count=0,
                 execution_time_ms=int((time.time() - start) * 1000),
                 confidence="low",
@@ -122,17 +170,21 @@ async def query(req: QueryRequest):
             results = await execute_bq_query(sql)
         except Exception as e:
             logger.warning(f"BigQuery exec failed: {e}")
-            # SQL execution failed → try RAG as fallback
-            rag_result = await _try_rag(req.question, req.language, start)
+            rag_result = await _try_rag(resolved, req.language, start, ctx)
             if rag_result:
+                await context_store.add_turn(
+                    req.session_id, req.question, resolved,
+                    rag_result.answer, "RAG",
+                )
                 return rag_result
+            fallback = (
+                "I encountered an issue processing that query. Could you please "
+                "try rephrasing? For example: 'How many active beneficiaries are there?' "
+                "or 'Show district-wise beneficiary count'."
+            )
+            await context_store.add_turn(req.session_id, req.question, resolved, fallback, "SQL")
             return QueryResponse(
-                question=req.question, intent="SQL",
-                answer=(
-                    "I encountered an issue processing that query. Could you please "
-                    "try rephrasing? For example: 'How many active beneficiaries are there?' "
-                    "or 'Show district-wise beneficiary count'."
-                ),
+                question=req.question, intent="SQL", answer=fallback,
                 row_count=0,
                 execution_time_ms=int((time.time() - start) * 1000),
                 confidence="low",
@@ -142,24 +194,41 @@ async def query(req: QueryRequest):
 
         # SQL returned 0 rows → try RAG before saying "no data"
         if row_count == 0:
-            rag_result = await _try_rag(req.question, req.language, start)
+            rag_result = await _try_rag(resolved, req.language, start, ctx)
             if rag_result:
+                await context_store.add_turn(
+                    req.session_id, req.question, resolved,
+                    rag_result.answer, "RAG",
+                )
                 return rag_result
 
+        # Generate NL answer — context is passed so the model can reference
+        # prior numbers (e.g., "active was 45,231, inactive is 12,453, combined = 57,684")
         answer = await generate_nl_answer(
-            req.question, sql, results, row_count, req.language
+            resolved, sql, results, row_count, req.language, ctx
         )
         chart_type = suggest_chart(results)
         ms = int((time.time() - start) * 1000)
 
         payload = {
-            "question": req.question, "answer": answer, "intent": "SQL",
-            "data": results[:100], "sql_query": sql, "row_count": row_count,
+            "question":          req.question,
+            "answer":            answer,
+            "intent":            "SQL",
+            "data":              results[:100],
+            "sql_query":         sql,
+            "row_count":         row_count,
             "execution_time_ms": ms,
-            "confidence": "high" if conf > 0.7 else "medium",
-            "chart_type": chart_type,
+            "confidence":        "high" if conf > 0.7 else "medium",
+            "chart_type":        chart_type,
         }
-        await set_cached(req.question, payload)
+        await set_cached(resolved, payload)
+
+        # Store turn WITH raw data so arithmetic follow-ups work
+        await context_store.add_turn(
+            req.session_id, req.question, resolved,
+            answer, "SQL",
+            sql_data=results[:10],
+        )
 
         if not req.include_sql:
             payload.pop("sql_query", None)
@@ -171,6 +240,8 @@ async def query(req: QueryRequest):
         logger.error(f"Query error: {e}", exc_info=True)
         raise HTTPException(500, "We encountered an issue. Please try again shortly.")
 
+
+# ── Suggestions endpoint ──────────────────────────────────────────────────────
 
 @router.get("/suggestions")
 async def suggestions():

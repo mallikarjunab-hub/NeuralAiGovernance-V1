@@ -1,6 +1,6 @@
 import psycopg2
 
-NEON_URL = "postgresql://neondb_owner:npg_OzbU70gEiYuV@ep-billowing-tooth-a14x195c.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
+NEON_URL = "postgresql://neondb_owner:npg_fCQNF8Hh5azw@ep-delicate-grass-a1wh92wv-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
 
 try:
     conn = psycopg2.connect(NEON_URL)
