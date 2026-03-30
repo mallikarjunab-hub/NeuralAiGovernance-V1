@@ -46,6 +46,31 @@ _SYNONYMS = {
     "amendment":        ["2013", "2016", "2021", "changed", "revised", "updated"],
     "how much":         ["amount", "rs", "rupees", "monthly", "financial assistance"],
     "stop":             ["cancel", "discontinue", "begging", "employed", "income exceeds"],
+    # Additional synonyms for better coverage
+    "income":           ["ceiling", "limit", "annual income", "family income", "per capita"],
+    "income limit":     ["ceiling income", "annual family", "per capita income", "qualifies"],
+    "age":              ["years old", "60 years", "senior", "minimum age", "above"],
+    "procedure":        ["steps", "process", "how to", "application", "submit"],
+    "approve":          ["sanction", "chief minister", "committee", "approved by"],
+    "approved":         ["sanctioned", "committee headed", "chief minister", "director"],
+    "fee":              ["rs.200", "rs.50", "registration charge", "mla certificate"],
+    "griha aadhar":     ["separate scheme", "household", "different", "not same as dssy"],
+    "hiv":              ["aids", "hiv/aids", "medical", "patients", "2000 per month"],
+    "single woman":     ["unmarried", "above 50", "divorced", "abandoned", "judicially"],
+    "divorced":         ["divorcee", "divorce decree", "abandoned", "judicially separated"],
+    "bank":             ["ecs", "nationalized", "cooperative", "account", "deposit"],
+    "cag":              ["audit", "comptroller", "2008", "findings", "report"],
+    "notification":     ["gazette", "notification number", "50/354", "official"],
+    "scheme":           ["dssy", "dayanand", "social security", "welfare", "goa"],
+    "merge":            ["amalgamated", "combined", "subsumed", "earlier schemes"],
+    "merged":           ["amalgamated", "old schemes", "previous", "converted"],
+    "husband":          ["spouse", "both cannot", "only one", "simultaneous"],
+    "marriage":         ["married", "husband wife", "spouse", "remarried"],
+    "residency":        ["domicile", "15 years", "goa resident", "residence proof"],
+    "where":            ["location", "address", "office", "panjim", "18th june road"],
+    "contact":          ["address", "director", "social welfare", "panaji", "phone"],
+    "difference":       ["vs", "versus", "compare", "ddssy", "different from"],
+    "aids appliances":  ["wheelchair", "prosthetic", "hearing aid", "1 lakh", "five years"],
 }
 
 
@@ -402,6 +427,78 @@ DSSY payment process:
 - Each beneficiary must have a single account in a Nationalized Bank or Co-operative Bank
 Historical channels: LIC (2002), Mapusa Urban Co-operative Bank (2003), Goa State Co-operative Bank (2006), current: direct ECS transfer
 Application process: Submit to Director of Social Welfare with required documents. Registration fee Rs.200/-. Sanctioned by committee headed by Chief Minister.""",
+
+        """[DIRECT ANSWER: Income Limit and Eligibility Ceiling]
+Income eligibility criteria for DSSY:
+- Annual family per capita income must be LESS THAN the annual financial assistance amount provided under the scheme
+- In practical terms: if your family's annual per capita income is less than what DSSY would pay you annually, you qualify
+- Beneficiary must NOT be receiving financial assistance from any other source (Central or State Government)
+- Both husband and wife CANNOT receive DSSY simultaneously — only ONE person per family can receive the benefit
+- If income exceeds the ceiling after enrollment, financial assistance will be STOPPED""",
+
+        """[DIRECT ANSWER: Application Process Step by Step]
+How to apply for DSSY:
+Step 1: Collect application form from Directorate of Social Welfare or Mamlatdar office
+Step 2: Gather all required documents (birth certificate, income certificate, residence certificate, Aadhaar card, category-specific documents)
+Step 3: Pay registration fee of Rs.200/- (or Rs.50/- if unable to pay, with MLA/MP certificate)
+Step 4: Submit completed form with documents to Director of Social Welfare
+Step 5: Application reviewed by sanctioning committee headed by Chief Minister
+Step 6: On approval, bank account linked for ECS payment
+Step 7: Monthly financial assistance disbursed directly to bank account
+Address: Directorate of Social Welfare, 18th June Road, Panjim, Goa""",
+
+        """[DIRECT ANSWER: Who Approves DSSY Applications]
+DSSY application approval process:
+- Applications are submitted to the Director of Social Welfare
+- Sanctioned by a committee HEADED BY THE CHIEF MINISTER of Goa
+- This makes DSSY a scheme with highest-level government approval
+- Director of Social Welfare, Goa is the implementing authority
+- Office location: 18th June Road, Panjim (Panaji), Goa
+- Website: https://socialwelfare.goa.gov.in""",
+
+        """[DIRECT ANSWER: Special Categories — Divorced, Abandoned, Unmarried Women]
+Single Women eligibility under DSSY:
+1. Widows — husband deceased (requires death certificate and marriage certificate)
+2. Divorced women — legally divorced (requires Divorce Decree from court)
+3. Abandoned women — deserted by husband (self-declaration required)
+4. Judicially separated women — legal separation order
+5. Unmarried women ABOVE 50 years of age — (self-declaration on stamp paper)
+All single women must be 18 years or above and meet residency and income requirements.
+A divorced woman CAN apply for DSSY providing she meets eligibility criteria.""",
+
+        """[DIRECT ANSWER: DSSY and Griha Aadhar — Difference]
+Griha Aadhar is a COMPLETELY SEPARATE scheme from DSSY:
+- Griha Aadhar: Monthly financial assistance of Rs.1,500 to homemaker wives in Goa (not receiving any other government assistance)
+- DSSY: Monthly pension for senior citizens, widows, single women, disabled persons, HIV/AIDS patients
+These are two different schemes administered by the Government of Goa.
+A person receiving Griha Aadhar CANNOT simultaneously receive DSSY as they would be receiving financial assistance from another government source.""",
+
+        """[DIRECT ANSWER: CAG Audit Findings on DSSY 2008]
+Comptroller and Auditor General (CAG) Audit Report on DSSY (2008):
+- CAG audited DSSY implementation covering 2001-2008 period
+- Beneficiary counts reviewed: 5,720 (2001-02) to 97,282 (2007-08)
+- CAG noted the rapid growth and expansion of the scheme
+- Audit covered disbursement through LIC and Mapusa Urban Co-operative Bank channels
+- Findings were used to improve scheme administration and payment systems
+- Led to transition to direct ECS bank transfer for better transparency
+The CAG audit helped strengthen accountability and reduce payment delays in DSSY.""",
+
+        """[DIRECT ANSWER: Schemes Amalgamated into DSSY]
+DSSY was created by amalgamating several earlier welfare schemes:
+- Old Age Pension Scheme (for senior citizens)
+- Widow Pension Scheme
+- Disability Pension Scheme
+These earlier schemes were merged into the unified DSSY from 2nd October 2001 / 1st January 2002.
+The amalgamation simplified administration and brought all beneficiaries under one scheme with unified eligibility, payment, and documentation requirements.""",
+
+        """[DIRECT ANSWER: Residency and Domicile Requirement]
+Residency requirement for DSSY eligibility:
+- Applicant must be a BONAFIDE RESIDENT OF GOA
+- Either: Born in Goa (resident by birth), OR
+- Domicile: Residing in Goa continuously for at least 15 YEARS
+- Proof: Residence certificate from Mamlatdar of the Taluka, OR certificate from a Gazetted Officer of State Government
+- The 15-year residency requirement is strictly enforced
+- Temporary residents or those with less than 15 years domicile do NOT qualify""",
     ]
 
     chunks.extend(synthetic_chunks)

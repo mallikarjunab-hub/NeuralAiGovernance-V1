@@ -129,6 +129,57 @@ SQL: SELECT SUM(amount) AS total_paid FROM `edw-pilot.neural.payments` WHERE pay
 
 Q: payment compliance rate
 SQL: SELECT payment_status, COUNT(*) AS count, ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 2) AS percentage FROM `edw-pilot.neural.payments` GROUP BY payment_status ORDER BY count DESC;
+
+Q: top 5 talukas by active beneficiaries
+SQL: SELECT t.taluka_name AS taluka, d.district_name AS district, COUNT(*) AS active_count FROM `edw-pilot.neural.beneficiaries` b JOIN `edw-pilot.neural.talukas` t ON b.taluka_id = t.taluka_id JOIN `edw-pilot.neural.districts` d ON b.district_id = d.district_id WHERE b.status='active' GROUP BY t.taluka_name, d.district_name ORDER BY active_count DESC LIMIT 5;
+
+Q: average age of beneficiaries by category
+SQL: SELECT c.category_name AS category, ROUND(AVG(b.age), 1) AS average_age, COUNT(*) AS total FROM `edw-pilot.neural.beneficiaries` b JOIN `edw-pilot.neural.categories` c ON b.category_id = c.category_id WHERE b.status='active' GROUP BY c.category_name ORDER BY average_age DESC;
+
+Q: district and category cross breakdown
+SQL: SELECT d.district_name AS district, c.category_name AS category, COUNT(*) AS count FROM `edw-pilot.neural.beneficiaries` b JOIN `edw-pilot.neural.districts` d ON b.district_id = d.district_id JOIN `edw-pilot.neural.categories` c ON b.category_id = c.category_id WHERE b.status='active' GROUP BY d.district_name, c.category_name ORDER BY d.district_name, count DESC;
+
+Q: taluka with most senior citizens
+SQL: SELECT t.taluka_name AS taluka, d.district_name AS district, COUNT(*) AS senior_count FROM `edw-pilot.neural.beneficiaries` b JOIN `edw-pilot.neural.talukas` t ON b.taluka_id = t.taluka_id JOIN `edw-pilot.neural.districts` d ON b.district_id = d.district_id JOIN `edw-pilot.neural.categories` c ON b.category_id = c.category_id WHERE c.category_name='Senior Citizen' AND b.status='active' GROUP BY t.taluka_name, d.district_name ORDER BY senior_count DESC LIMIT 1;
+
+Q: disabled beneficiaries count
+SQL: SELECT COUNT(*) AS disabled_count FROM `edw-pilot.neural.beneficiaries` b JOIN `edw-pilot.neural.categories` c ON b.category_id = c.category_id WHERE c.category_name = 'Disabled' AND b.status='active';
+
+Q: HIV AIDS beneficiaries count
+SQL: SELECT COUNT(*) AS hiv_aids_count FROM `edw-pilot.neural.beneficiaries` b JOIN `edw-pilot.neural.categories` c ON b.category_id = c.category_id WHERE c.category_name = 'HIV/AIDS' AND b.status='active';
+
+Q: beneficiaries above 60 years
+SQL: SELECT COUNT(*) AS count FROM `edw-pilot.neural.beneficiaries` WHERE age >= 60 AND status='active';
+
+Q: beneficiaries between 60 and 70
+SQL: SELECT COUNT(*) AS count FROM `edw-pilot.neural.beneficiaries` WHERE age BETWEEN 60 AND 70 AND status='active';
+
+Q: single woman count
+SQL: SELECT COUNT(*) AS single_woman_count FROM `edw-pilot.neural.beneficiaries` b JOIN `edw-pilot.neural.categories` c ON b.category_id = c.category_id WHERE c.category_name = 'Single Woman' AND b.status='active';
+
+Q: total failed payments
+SQL: SELECT COUNT(*) AS failed_count, SUM(amount) AS failed_amount FROM `edw-pilot.neural.payments` WHERE payment_status='failed';
+
+Q: pending payments count
+SQL: SELECT COUNT(*) AS pending_count FROM `edw-pilot.neural.payments` WHERE payment_status='pending';
+
+Q: category wise average monthly amount
+SQL: SELECT c.category_name AS category, c.monthly_amount AS monthly_amount_rs FROM `edw-pilot.neural.categories` c ORDER BY c.monthly_amount DESC;
+
+Q: total beneficiaries per taluka in north goa with category breakdown
+SQL: SELECT t.taluka_name AS taluka, c.category_name AS category, COUNT(*) AS count FROM `edw-pilot.neural.beneficiaries` b JOIN `edw-pilot.neural.talukas` t ON b.taluka_id = t.taluka_id JOIN `edw-pilot.neural.categories` c ON b.category_id = c.category_id WHERE b.district_id = 1 AND b.status='active' GROUP BY t.taluka_name, c.category_name ORDER BY t.taluka_name, count DESC;
+
+Q: male vs female active beneficiaries percentage
+SQL: SELECT gender, COUNT(*) AS count, ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 2) AS percentage FROM `edw-pilot.neural.beneficiaries` WHERE status='active' GROUP BY gender ORDER BY count DESC;
+
+Q: village wise top 10 beneficiaries
+SQL: SELECT v.village_name AS village, t.taluka_name AS taluka, d.district_name AS district, COUNT(*) AS count FROM `edw-pilot.neural.beneficiaries` b JOIN `edw-pilot.neural.villages` v ON b.village_id = v.village_id JOIN `edw-pilot.neural.talukas` t ON b.taluka_id = t.taluka_id JOIN `edw-pilot.neural.districts` d ON b.district_id = d.district_id WHERE b.status='active' GROUP BY v.village_name, t.taluka_name, d.district_name ORDER BY count DESC LIMIT 10;
+
+Q: inactive beneficiaries by category
+SQL: SELECT c.category_name AS category, COUNT(*) AS inactive_count FROM `edw-pilot.neural.beneficiaries` b JOIN `edw-pilot.neural.categories` c ON b.category_id = c.category_id WHERE b.status='inactive' GROUP BY c.category_name ORDER BY inactive_count DESC;
+
+Q: deceased beneficiaries by district
+SQL: SELECT d.district_name AS district, COUNT(*) AS deceased_count FROM `edw-pilot.neural.beneficiaries` b JOIN `edw-pilot.neural.districts` d ON b.district_id = d.district_id WHERE b.status='deceased' GROUP BY d.district_name ORDER BY deceased_count DESC;
 """
 
 FORBIDDEN = [r'\bINSERT\b',r'\bUPDATE\b',r'\bDELETE\b',r'\bDROP\b',r'\bCREATE\b',r'\bALTER\b',r'\bTRUNCATE\b',r'\bMERGE\b']
@@ -138,14 +189,29 @@ FORBIDDEN = [r'\bINSERT\b',r'\bUPDATE\b',r'\bDELETE\b',r'\bDROP\b',r'\bCREATE\b'
 
 async def classify_intent(question: str) -> str:
     """Returns 'SQL' or 'RAG'. Edge cases handled before this is called."""
-    prompt = f"""Route this question to the right handler for a government welfare analytics system.
+    prompt = f"""Route this question to the correct handler for a government welfare analytics system.
 
-SQL  — wants numbers/counts/statistics/trends/lists/comparisons FROM the beneficiary database
-       Examples: how many, count, total, show, list, compare, district wise, taluka wise, 
-       active, inactive, subscribers, payout, payment, age distribution, trend, breakdown
-RAG  — wants scheme rules/eligibility/amounts/documents/history/policy/procedure FROM official scheme documents
-       Examples: what is eligibility, who can apply, what documents needed, how much pension,
-       what is DSSY, application process, life certificate, cancellation rules
+SQL  — question wants COUNTS, STATISTICS, LISTS, or COMPARISONS from the beneficiary DATABASE
+       Keywords: how many, count, total, show me, list, compare, district-wise, taluka-wise,
+       active/inactive/deceased, payout, payment status, age distribution, top N, breakdown, trend,
+       percentage, village-wise, gender, registration, female, male, category-wise
+
+RAG  — question wants RULES, POLICY, ELIGIBILITY, DOCUMENTS, AMOUNTS, HISTORY, or PROCEDURES
+       from OFFICIAL SCHEME DOCUMENTS
+       Keywords: who is eligible, what documents, how much pension, how to apply, what is DSSY,
+       life certificate, cancellation, income limit, registration fee, amendment, launched, history,
+       widow rules, disabled rules, grievance, which schemes merged, what is DDSSY, payment process,
+       bank account, ECS, CAG audit, notification number, Griha Aadhar
+
+EXAMPLES:
+"How many active beneficiaries?" → SQL
+"What documents are needed?" → RAG
+"District-wise breakdown" → SQL
+"Who is eligible for DSSY?" → RAG
+"Total widow beneficiaries in North Goa" → SQL
+"How much pension do disabled persons get?" → RAG
+"Show me top 5 talukas" → SQL
+"What is the income limit for DSSY?" → RAG
 
 Reply ONLY with SQL or RAG.
 
@@ -173,6 +239,12 @@ RULES:
 - Never select PII columns (aadhar, phone, address, bank_account)
 - Always use proper JOIN conditions with correct column names
 - Use BigQuery SQL dialect (not PostgreSQL)
+- For "top N" questions use LIMIT N with ORDER BY DESC
+- For percentage questions use ROUND(x * 100.0 / SUM(x) OVER(), 2)
+- For age range questions use BETWEEN or CASE WHEN age groups
+- Default status filter is 'active' unless question asks for inactive/deceased/all
+- Always alias columns with readable names (AS district, AS count, etc.)
+- For cross-tab/breakdown questions GROUP BY both dimensions
 - If the question cannot be answered from the schema, output exactly: CANNOT_ANSWER
 
 Question: {question}
@@ -200,13 +272,17 @@ async def generate_nl_answer(question: str, sql: str, results: list, row_count: 
 
     prompt = f"""You are a DSSY scheme analytics assistant for the Department of Social Welfare, Government of Goa.
 The user asked: "{question}"
+Query context: {sql[:200]}
 Database returned {row_count} rows: {json.dumps(results[:15], default=str)}
 
-Write a clear, concise 2-3 sentence answer using the exact numbers from the data.
-Present key findings and notable patterns.
-Do NOT address the user as "Hon'ble Minister" or any title — just answer directly.
-Do NOT mention SQL, databases, or technical terms.
-Format large numbers with commas (e.g., 1,40,000).
+Write a clear, insightful 2-4 sentence answer using the exact numbers from the data.
+- Lead with the most important finding or direct answer to the question
+- Highlight the highest/lowest values or notable patterns if present
+- If there are multiple categories/districts, mention the top 2-3 by name with their numbers
+- Do NOT address the user by any title — answer directly
+- Do NOT mention SQL, databases, queries, or technical terms
+- Format large numbers with Indian comma notation (e.g., 1,40,000 not 140000)
+- Use Rs. prefix for monetary amounts
 {lang_instr}
 
 Answer:"""
@@ -223,9 +299,16 @@ async def rag_answer(question: str, chunks: list[str], language: str = "en") -> 
     lang_instr = f"Respond in {lang_name}." if language != "en" else ""
 
     prompt = f"""You are an expert assistant for the Dayanand Social Security Scheme (DSSY), Government of Goa.
-Answer ONLY from the context below. If the answer is not in the context, say so clearly.
-Be precise with amounts (Rs.), eligibility criteria, age limits, and procedures.
-Use official government language. Format amounts properly (e.g., Rs. 2,500/- per month).
+
+Instructions:
+- Answer ONLY from the provided context. If the answer is not in the context, say clearly: "This specific information is not available in the DSSY scheme documents."
+- Be precise with Rs. amounts, age limits, eligibility criteria, and deadlines
+- For procedure/process questions, use a numbered list (1. 2. 3.)
+- For eligibility questions, clearly state who qualifies and who does not
+- For document questions, list each document on a new line
+- Format amounts as: Rs. 2,500/- per month
+- Mention relevant amendment years if context includes them (e.g., 2013, 2016, 2021)
+- Keep the answer focused and factual — no filler phrases
 {lang_instr}
 
 CONTEXT:
@@ -310,11 +393,11 @@ def _clean_sql(raw: str) -> str:
         sql += ";"
     return sql
 
-async def _call(prompt: str, temp: float) -> str:
+async def _call(prompt: str, temp: float, max_tokens: int = 1024) -> str:
     url = f"{BASE}/models/{CHAT}:generateContent?key={settings.GEMINI_API_KEY}"
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": temp, "maxOutputTokens": 1024},
+        "generationConfig": {"temperature": temp, "maxOutputTokens": max_tokens},
     }
     async with httpx.AsyncClient(timeout=60.0) as c:
         r = await c.post(url, json=payload)

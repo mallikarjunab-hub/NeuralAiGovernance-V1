@@ -7,10 +7,9 @@
 Smart fallback: SQL fail → try RAG. RAG low confidence → try SQL.
 """
 import time, logging
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import text
+from fastapi import APIRouter, HTTPException
 
-from backend.database import get_bq_db, get_neon_db, execute_bq_query, neon_session_context
+from backend.database import execute_bq_query, neon_session_context
 from backend.schemas import QueryRequest, QueryResponse
 from backend.services.edge_handler import detect_edge_case
 from backend.services.gemini_service import (
@@ -28,17 +27,17 @@ async def _try_rag(question: str, language: str, start: float) -> QueryResponse 
     """Attempt RAG search on Neon. Returns QueryResponse if good match, else None."""
     try:
         async with neon_session_context() as neon_db:
-            chunks = await rag_search(neon_db, question, top_k=5)
-            relevant = [c for c in chunks if c["similarity"] >= 0.20] or chunks[:3]
+            chunks = await rag_search(neon_db, question, top_k=7)
+            relevant = [c for c in chunks if c["similarity"] >= 0.18] or chunks[:3]
             if not relevant:
                 return None
             answer = await rag_answer(question, [c["text"] for c in relevant], language)
-            if "not available" in answer.lower() and relevant[0]["similarity"] < 0.25:
+            if "not available" in answer.lower() and relevant[0]["similarity"] < 0.22:
                 return None
             return QueryResponse(
                 question=question, answer=answer, intent="RAG",
                 row_count=0, execution_time_ms=int((time.time() - start) * 1000),
-                confidence="high" if relevant[0]["similarity"] > 0.65 else "medium",
+                confidence="high" if relevant[0]["similarity"] > 0.60 else "medium",
             )
     except Exception as e:
         logger.warning(f"RAG fallback failed: {e}")

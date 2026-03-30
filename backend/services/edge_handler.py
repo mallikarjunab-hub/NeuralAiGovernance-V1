@@ -79,6 +79,19 @@ _SILLY = [
     # Insults / rude
     r"(stupid|dumb|useless|idiot|fool|trash|garbage)\s*(bot|ai|system|app)?",
     r"you\s+(suck|are\s+bad|are\s+useless|are\s+dumb)",
+
+    # General knowledge — geography, science, history, politics
+    r"(capital|president|prime\s*minister|currency|population|area)\s+of\s+\w+",
+    r"what\s+is\s+the\s+(capital|currency|language|population|flag)\s+of",
+    r"who\s+(is|was)\s+(the\s+)?(president|prime\s*minister|king|queen|ceo|founder|inventor)",
+    r"(largest|smallest|tallest|longest|biggest|fastest|richest|poorest)\s+(country|city|river|mountain|building)",
+    r"when\s+(was|did|is)\s+.*(born|invented|discovered|founded|independence|war|battle)",
+    r"(define|definition|meaning)\s+of\s+(?!dssy|dayanand|eligib|beneficiar|pension)",
+    r"(what|how)\s+(is|does|do)\s+(gravity|photosynthesis|evolution|democracy|inflation|climate)",
+    r"(recipe|ingredients|how\s+to\s+cook|how\s+to\s+make)\s+",
+    r"(symptom|treatment|cure|medicine|doctor|hospital)\s+(for|of)\s+",
+    r"(ipl|cricket|football|match|score|team|player|tournament)\b",
+    r"(bollywood|hollywood|movie|film|actor|actress|tv\s*series)\b",
 ]
 
 _CONFUSED = [
@@ -144,18 +157,27 @@ _RESPONSES = {
         "You can return anytime for beneficiary statistics or scheme information."
     ),
     "silly": (
-        "I appreciate the question! However, I'm a **purpose-built analytics system** "
-        "for the Dayanand Social Security Scheme (DSSY) — not a general-purpose assistant.\n\n"
-        "I'm not able to help with that, but I'm very good at DSSY-related queries."
+        "That's an interesting question, but I'm a **purpose-built assistant** "
+        "for the Dayanand Social Security Scheme (DSSY), Government of Goa — "
+        "so general topics are a bit outside my expertise!\n\n"
+        "Could you try asking me something like:\n"
+        "  \"How many active beneficiaries are in North Goa?\"\n"
+        "  \"Show category-wise monthly payout as a chart\"\n"
+        "  \"What are the eligibility criteria for DSSY?\"\n"
+        "  \"Which taluka has the most senior citizens?\"\n\n"
+        "I'd be happy to help with any DSSY statistics or scheme information!"
     ),
     "profanity": (
-        "I understand you may be frustrated. I'm here to help with DSSY scheme "
-        "queries and beneficiary data. Let's keep it professional and I'll do "
-        "my best to assist you."
+        "I understand you may be frustrated, and I'm here to help! "
+        "I specialise in DSSY scheme queries and beneficiary data for the "
+        "Department of Social Welfare, Government of Goa.\n\n"
+        "Let's try again — what would you like to know about DSSY? "
+        "For example: \"How many beneficiaries are there in South Goa?\" "
+        "or \"What documents are required to apply?\""
     ),
     "confused": (
         "No worries! Here are some things you can ask me:\n\n"
-        "**Data Queries:**\n"
+        "**Statistical & Visualization Queries:**\n"
         "  \"How many total beneficiaries are there?\"\n"
         "  \"Show taluka-wise active beneficiary count\"\n"
         "  \"Compare North Goa vs South Goa beneficiaries\"\n"
@@ -166,17 +188,20 @@ _RESPONSES = {
         "  \"How much pension do senior citizens receive?\"\n"
         "  \"What documents are needed to apply?\"\n"
         "  \"What is the Life Certificate requirement?\"\n\n"
-        "Just type your question!"
+        "Just type your question and I'll get right on it!"
     ),
     "off_topic": (
-        "I am an AI assistant built exclusively for the Dayanand Social Security Scheme (DSSY), "
-        "Department of Social Welfare, Government of Goa. "
-        "I am not able to help with that query.\n\n"
-        "However, here is what I can do for you:\n\n"
-        "  Run SQL queries on the live DSSY beneficiary database and show results as tables\n"
-        "  Visualize data as bar charts, donut charts, and line graphs\n"
-        "  Answer scheme questions — eligibility, documents, pension amounts, amendments\n"
-        "  Analyse trends — district-wise, taluka-wise, category-wise, payment compliance"
+        "That's a great question — but it's a little outside my area! "
+        "I'm a **DSSY Statistical Analysis Assistant** built exclusively for "
+        "the Dayanand Social Security Scheme, Department of Social Welfare, Government of Goa.\n\n"
+        "Could you ask me something related to DSSY? For example:\n\n"
+        "  \"How many widow beneficiaries are there in Goa?\"\n"
+        "  \"Show me a district-wise breakdown with a chart\"\n"
+        "  \"What is the income limit to qualify for DSSY?\"\n"
+        "  \"Which taluka has the highest number of disabled beneficiaries?\"\n"
+        "  \"How much pension do senior citizens receive per month?\"\n\n"
+        "I can run live database queries, generate visualizations, and answer "
+        "all scheme-related questions. How can I help you with DSSY today?"
     ),
 }
 
@@ -191,6 +216,19 @@ def detect_edge_case(question: str) -> dict | None:
         return {"type": "confused", "response": _RESPONSES["confused"]}
 
     ql = q.lower()
+
+    # ── Early exit: clear DSSY analytical intent → skip all edge checks ──
+    _DSSY_STRONG = [
+        r"\bbeneficiar", r"\btaluka\b", r"\bdistrict\b", r"\bdssy\b",
+        r"\bactive\b", r"\binactive\b", r"\bdeceased\b",
+        r"\bpension\b", r"\bpayout\b", r"\bpayment\b",
+        r"\bscheme\b", r"\beligib", r"\bwidow", r"\bdisabled\b",
+        r"\bsenior\s*citizen", r"\bcategory\b", r"\bregistration\b",
+        r"(north|south)\s*goa", r"\bgoa\b.*\b(count|total|how many)",
+        r"\bsocial\s*welfare\b", r"\bfinancial\s*assistance\b",
+    ]
+    if any(re.search(p, ql) for p in _DSSY_STRONG):
+        return None
 
     # Order matters — most specific first
     for pattern in _GREETINGS:

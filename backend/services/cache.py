@@ -1,7 +1,13 @@
-import json, logging
+import json, logging, hashlib
 from backend.config import settings
 logger = logging.getLogger(__name__)
 _r = None
+
+
+def _cache_key(q: str) -> str:
+    """Stable cache key using MD5 — survives process restarts unlike hash()."""
+    return "q:" + hashlib.md5(q.lower().strip().encode()).hexdigest()
+
 
 async def _redis():
     global _r
@@ -14,13 +20,13 @@ async def _redis():
 async def get_cached(q: str) -> dict | None:
     r = await _redis()
     if not r: return None
-    try: d = await r.get(f"q:{hash(q.lower().strip())}"); return json.loads(d) if d else None
+    try: d = await r.get(_cache_key(q)); return json.loads(d) if d else None
     except: return None
 
 async def set_cached(q: str, payload: dict, ttl=300):
     r = await _redis()
     if not r: return
-    try: await r.setex(f"q:{hash(q.lower().strip())}", ttl, json.dumps(payload, default=str))
+    try: await r.setex(_cache_key(q), ttl, json.dumps(payload, default=str))
     except: pass
 
 async def check_health() -> bool:
