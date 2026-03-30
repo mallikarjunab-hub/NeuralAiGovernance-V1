@@ -193,7 +193,10 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
 
 <div class="main">
 
-  <!-- DASHBOARD — Analytics -->
+  <!-- ═══════════════════════════════════════════════════════════════════
+       DASHBOARD — VERSION A : Custom Chart.js  (CURRENTLY ACTIVE)
+       To switch to Power BI → add  style="display:none"  to the div below
+       ═══════════════════════════════════════════════════════════════════ -->
   <div class="view on" id="v-dash">
 
     <!-- KPI Row -->
@@ -287,6 +290,9 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
     </div>
 
   </div>
+  <!-- ═══════════════════════════════════════════════════════════════════
+       END VERSION A
+       ═══════════════════════════════════════════════════════════════════ -->
 
   <!-- CHAT -->
   <div class="view" id="v-chat">
@@ -720,64 +726,38 @@ const qsa = s => document.querySelectorAll(s);
 </html>
 
 <!--
-================================================================================
-  DASHBOARD SWITCH GUIDE — Read before showing to CTO
-================================================================================
+  ═══════════════════════════════════════════════════════════════════════════
+  DASHBOARD — VERSION B : Power BI Embed  (CURRENTLY INACTIVE)
 
-  TWO VERSIONS AVAILABLE:
-    A) Custom Chart.js Dashboard  — currently ACTIVE (live data from BigQuery)
-    B) Power BI Embedded Report   — commented out below (rich visuals, filters)
+  HOW TO ACTIVATE POWER BI (2 steps):
+    1. Find the VERSION A div above → add  style="display:none"  to it:
+         <div class="view on" id="v-dash" style="display:none">
 
-  HOW TO SWITCH TO POWER BI:
-  ─────────────────────────────────────────────────────────────────────────────
-  Step 1: In the HTML above, find the block:
+    2. Remove the opening "<!--" and closing "-->" around this entire block.
 
-      <!-- DASHBOARD — Analytics -->
-      <div class="view on" id="v-dash">
-        ...all the kpi-row, cstrip, ch2 divs...
-      </div>
+  HOW TO GO BACK TO CUSTOM (2 steps):
+    1. Remove  style="display:none"  from the VERSION A div above.
+    2. Re-wrap this block in "<!--" and "-->".
+  ═══════════════════════════════════════════════════════════════════════════
 
-  Step 2: Wrap it in a comment:
+  <style>
+    .pbi-wrap { width:100%; height:calc(100vh - 130px); border-radius:12px;
+                overflow:hidden; border:1px solid #c7d9f5; background:#fff;
+                box-shadow:0 1px 4px rgba(0,53,128,.08),0 4px 16px rgba(0,53,128,.06); }
+    .pbi-wrap iframe { width:100%; height:100%; border:none; display:block; }
+  </style>
 
-      <!--  CUSTOM DASHBOARD — temporarily hidden
-      <div class="view on" id="v-dash">
-        ...
-      </div>
-      -->
-
-  Step 3: Uncomment the Power BI block below by removing the wrapping
-          HTML comment tags (the ones that say POWERBI START / END).
-
-  HOW TO SWITCH BACK TO CUSTOM:
-  ─────────────────────────────────────────────────────────────────────────────
-  Reverse the steps above. Re-enable the custom dashboard div and
-  re-comment the Power BI block.
-
-================================================================================
-  POWER BI VERSION — uncomment the block below to activate
-================================================================================
-
-<style>
-  .pbi-wrap{width:100%;height:calc(100vh - 130px);border-radius:12px;overflow:hidden;
-            box-shadow:0 1px 4px rgba(0,53,128,.08),0 4px 16px rgba(0,53,128,.06);
-            border:1px solid #c7d9f5;background:#fff}
-  .pbi-wrap iframe{width:100%;height:100%;border:none;display:block}
-</style>
-
-POWERBI START — remove this line to activate
-<div class="view on" id="v-dash">
-  <div class="pbi-wrap">
-    <iframe
-      src="https://app.powerbi.com/view?r=eyJrIjoiNWEzZGYwOWItNGY2NS00ODhkLWJlYzItZDI3YzY3ZDQ1ZWJkIiwidCI6IjhlNDU1OTYxLTRiZjMtNGYwMi05M2Q0LWE2NzFmMmYxMWNmOSJ9"
-      allowfullscreen
-      allow="fullscreen"
-      frameborder="0"
-      loading="lazy"
-      title="DSSY Power BI Dashboard — Department of Social Welfare, Govt. of Goa">
-    </iframe>
+  <div class="view on" id="v-dash">
+    <div class="pbi-wrap">
+      <iframe
+        src="https://app.powerbi.com/view?r=eyJrIjoiNWEzZGYwOWItNGY2NS00ODhkLWJlYzItZDI3YzY3ZDQ1ZWJkIiwidCI6IjhlNDU1OTYxLTRiZjMtNGYwMi05M2Q0LWE2NzFmMmYxMWNmOSJ9"
+        allowfullscreen
+        allow="fullscreen"
+        frameborder="0"
+        loading="lazy"
+        title="DSSY Power BI Dashboard — Department of Social Welfare, Govt. of Goa">
+      </iframe>
+    </div>
   </div>
-</div>
-POWERBI END — remove this line to activate
 
-================================================================================
 -->
