@@ -119,8 +119,16 @@ async def dashboard(
                 {bj} {wa}
                 GROUP BY d.district_name ORDER BY count DESC
             """),
-            # ── Registration trend — always full history (it IS the time chart) ─
-            _Q("SELECT registration_date_id AS period, COUNT(*) AS count FROM `edw-pilot.neural.beneficiaries` GROUP BY registration_date_id ORDER BY registration_date_id"),
+            # ── Registration trend — monthly buckets (full history, readable scale) ─
+            _Q("""
+                SELECT
+                    FORMAT_DATE('%Y-%m', rd.date) AS period,
+                    COUNT(*) AS count
+                FROM `edw-pilot.neural.beneficiaries` b
+                JOIN `edw-pilot.neural.dates` rd ON b.registration_date_id = rd.date_id
+                GROUP BY period
+                ORDER BY period
+            """),
             # ── Age distribution (filter by registration date) ────────────────
             _Q(f"""
                 SELECT CASE WHEN b.age < 40 THEN 'Under 40' WHEN b.age < 60 THEN '40-59'
