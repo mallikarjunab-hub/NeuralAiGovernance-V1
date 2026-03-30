@@ -14,23 +14,28 @@ async def _redis():
     if _r is None:
         try:
             import redis.asyncio as a; _r = a.from_url(settings.REDIS_URL, decode_responses=True); await _r.ping()
-        except: _r = None
+        except Exception as e:
+            logger.debug(f"Redis unavailable: {e}")
+            _r = None
     return _r
 
 async def get_cached(q: str) -> dict | None:
     r = await _redis()
     if not r: return None
     try: d = await r.get(_cache_key(q)); return json.loads(d) if d else None
-    except: return None
+    except Exception as e:
+        logger.debug(f"Cache get error: {e}")
+        return None
 
 async def set_cached(q: str, payload: dict, ttl=300):
     r = await _redis()
     if not r: return
     try: await r.setex(_cache_key(q), ttl, json.dumps(payload, default=str))
-    except: pass
+    except Exception as e:
+        logger.debug(f"Cache set error: {e}")
 
 async def check_health() -> bool:
     r = await _redis()
     if not r: return False
     try: await r.ping(); return True
-    except: return False
+    except Exception: return False

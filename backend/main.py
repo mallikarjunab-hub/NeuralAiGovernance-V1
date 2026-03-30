@@ -71,13 +71,19 @@ async def lifespan(app: FastAPI):
 
                     if not await is_ingested(db, "DSSY_Knowledge_Base"):
                         if os.path.exists(_KB):
-                            kb = open(_KB, encoding="utf-8").read()
-                            logger.info(f"Ingesting DSSY Knowledge Base ({len(kb):,} chars)...")
-                            await ingest(
-                                db, "DSSY_Knowledge_Base", kb,
-                                {"source": "DSSY Official Documents", "version": "2026"}
-                            )
-                            logger.info("✅ DSSY Knowledge Base ingested")
+                            try:
+                                with open(_KB, encoding="utf-8") as f:
+                                    kb = f.read()
+                            except OSError as e:
+                                logger.error(f"Failed to read KB file: {e}")
+                                kb = ""
+                            if kb:
+                                logger.info(f"Ingesting DSSY Knowledge Base ({len(kb):,} chars)...")
+                                await ingest(
+                                    db, "DSSY_Knowledge_Base", kb,
+                                    {"source": "DSSY Official Documents", "version": "2026"}
+                                )
+                                logger.info("DSSY Knowledge Base ingested")
                         else:
                             logger.warning(f"⚠️  KB file not found: {_KB}")
                     else:

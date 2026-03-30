@@ -13,8 +13,8 @@ Multi-turn conversation:
 
 Smart fallback: SQL fail → try RAG.  RAG low confidence → try SQL.
 """
-import time, logging
-from fastapi import APIRouter, HTTPException
+import time, logging, base64
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 
 from backend.database import execute_bq_query, neon_session_context
 from backend.schemas import QueryRequest, QueryResponse
@@ -23,7 +23,10 @@ from backend.services.gemini_service import (
     resolve_question,
     classify_intent, generate_sql, generate_nl_answer,
     rag_answer, validate_sql, suggest_chart,
+    BASE, CHAT,
 )
+from backend.config import settings
+import httpx
 from backend.services.rag_service import search as rag_search
 from backend.services.cache import get_cached, set_cached
 from backend.services.context_store import context_store
@@ -227,7 +230,7 @@ async def query(req: QueryRequest):
         await context_store.add_turn(
             req.session_id, req.question, resolved,
             answer, "SQL",
-            sql_data=results[:10],
+            sql_data=results[:50],
         )
 
         if not req.include_sql:
@@ -239,6 +242,46 @@ async def query(req: QueryRequest):
     except Exception as e:
         logger.error(f"Query error: {e}", exc_info=True)
         raise HTTPException(500, "We encountered an issue. Please try again shortly.")
+
+
+# ── Transcribe endpoint ───────────────────────────────────────────────────────
+
+_LANG_HINT = {"en-IN": "English", "hi-IN": "Hindi", "te-IN": "Telugu"}
+
+_ALLOWED_AUDIO_TYPES = {"audio/webm", "audio/wav", "audio/mp3", "audio/ogg", "audio/mpeg", "audio/mp4"}
+_MAX_AUDIO_BYTES = 5 * 1024 * 1024  # 5 MB
+
+@router.post("/transcribe")
+async def transcribe(
+    audio: UploadFile = File(...),
+    language: str = Form("en-IN"),
+):
+    audio_bytes = await audio.read()
+    if len(audio_bytes) > _MAX_AUDIO_BYTES:
+        raise HTTPException(413, "Audio file too large. Maximum size is 5 MB.")
+    mime_type = (audio.content_type or "audio/webm").split(";")[0].strip()
+    if mime_type not in _ALLOWED_AUDIO_TYPES:
+        mime_type = "audio/webm"
+    audio_b64 = base64.b64encode(audio_bytes).decode()
+    lang      = _LANG_HINT.get(language, "English")
+
+    payload = {"contents": [{"parts": [
+        {"text": f"Transcribe this audio exactly as spoken in {lang}. Return only the transcribed text, nothing else."},
+        {"inline_data": {"mime_type": mime_type, "data": audio_b64}},
+    ]}]}
+
+    try:
+        url = f"{BASE}/models/{CHAT}:generateContent?key={settings.GEMINI_API_KEY}"
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.post(url, json=payload)
+            resp.raise_for_status()
+        transcript = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+        return {"transcript": transcript}
+    except httpx.TimeoutException:
+        raise HTTPException(504, "Transcription timed out. Please try again.")
+    except Exception as e:
+        logger.error(f"Transcription error: {e}")
+        raise HTTPException(502, "Transcription failed. Please try again.")
 
 
 # ── Suggestions endpoint ──────────────────────────────────────────────────────

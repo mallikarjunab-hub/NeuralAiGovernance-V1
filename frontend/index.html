@@ -529,58 +529,65 @@ function setLang(lang, btn) {
   qs('#qinp').placeholder = LANG_PLACEHOLDER[lang] || LANG_PLACEHOLDER.en;
 }
 
-// ── VOICE / MIC ───────────────────────────────────────────────────────────────
-let recognition = null, isRecording = false;
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+// ── VOICE / MIC (Gemini audio transcription) ─────────────────────────────────
+let mediaRecorder = null, audioChunks = [], isRecording = false;
 
 function toggleMic() {
-  if (!SpeechRecognition) {
-    showMicStatus('Voice input not supported in this browser. Try Chrome.', false);
-    return;
-  }
   if (isRecording) { stopMic(); return; }
   startMic();
 }
 
-function startMic() {
-  recognition = new SpeechRecognition();
-  recognition.lang = LANG_SPEECH[curLang] || 'en-IN';
-  recognition.interimResults = true;
-  recognition.maxAlternatives = 1;
-  recognition.continuous = false;
-
-  recognition.onstart = () => {
+async function startMic() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioChunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+    mediaRecorder.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop());
+      const blob = new Blob(audioChunks, { type: 'audio/webm' });
+      await sendAudioToGemini(blob);
+    };
+    mediaRecorder.start();
     isRecording = true;
     qs('#micBtn').classList.add('recording');
-    showMicStatus('Listening… speak now', true);
-  };
-
-  recognition.onresult = (e) => {
-    const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
-    qs('#qinp').value = transcript;
-    qs('#qinp').style.height = 'auto';
-    qs('#qinp').style.height = Math.min(qs('#qinp').scrollHeight, 110) + 'px';
-    if (e.results[e.results.length - 1].isFinal) {
-      showMicStatus('Voice captured — press send', false);
-    }
-  };
-
-  recognition.onerror = (e) => {
-    stopMic();
-    const msgs = { 'not-allowed':'Microphone permission denied.', 'no-speech':'No speech detected. Try again.', 'network':'Network error.' };
-    showMicStatus(msgs[e.error] || 'Voice error. Try again.', false);
-  };
-
-  recognition.onend = () => { stopMic(); };
-
-  try { recognition.start(); }
-  catch(e) { showMicStatus('Could not start microphone.', false); }
+    showMicStatus('Listening… click mic to stop', true);
+  } catch(e) {
+    showMicStatus('Microphone permission denied.', false);
+  }
 }
 
 function stopMic() {
   isRecording = false;
   qs('#micBtn').classList.remove('recording');
-  if (recognition) { try { recognition.stop(); } catch(e) {} recognition = null; }
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    showMicStatus('Processing…', true);
+    mediaRecorder.stop();
+  }
+}
+
+async function sendAudioToGemini(blob) {
+  if (blob.size > 5 * 1024 * 1024) {
+    showMicStatus('Recording too long. Keep under ~2 minutes.', false);
+    return;
+  }
+  try {
+    const form = new FormData();
+    form.append('audio', blob, 'audio.webm');
+    form.append('language', LANG_SPEECH[curLang] || 'en-IN');
+    const res  = await fetch(`${BASE}/api/query/transcribe`, { method: 'POST', body: form });
+    const data = await res.json();
+    if (data.transcript) {
+      qs('#qinp').value = data.transcript;
+      qs('#qinp').style.height = 'auto';
+      qs('#qinp').style.height = Math.min(qs('#qinp').scrollHeight, 110) + 'px';
+      showMicStatus('Voice captured — press send', false);
+    } else {
+      showMicStatus('Could not transcribe. Try again.', false);
+    }
+  } catch(e) {
+    showMicStatus('Transcription failed. Try again.', false);
+  }
 }
 
 function showMicStatus(msg, active) {
@@ -788,16 +795,28 @@ function addWelcome() {
 async function loadSugs() {
   try {
     const d = await (await fetch(`${BASE}/api/query/suggestions`)).json();
+    const list = qs('#sugList');
+    list.innerHTML = '';
+    const makeBtn = s => {
+      const btn = document.createElement('button');
+      btn.className = 'chip';
+      btn.textContent = s;
+      btn.addEventListener('click', () => useSug(s));
+      return btn;
+    };
     if (d.categories) {
-      let html = '';
       for (const [cat, items] of Object.entries(d.categories)) {
-        html += `<div class="sug-cat"><div class="sug-cat-hd">${cat}</div>`;
-        html += items.map(s => `<button class="chip" onclick="useSug('${s.replace(/'/g,"\\'")}')">${s}</button>`).join('');
-        html += `</div>`;
+        const div = document.createElement('div');
+        div.className = 'sug-cat';
+        const hd = document.createElement('div');
+        hd.className = 'sug-cat-hd';
+        hd.textContent = cat;
+        div.appendChild(hd);
+        items.forEach(s => div.appendChild(makeBtn(s)));
+        list.appendChild(div);
       }
-      qs('#sugList').innerHTML = html;
     } else if (d.suggestions) {
-      qs('#sugList').innerHTML = d.suggestions.map(s => `<button class="chip" onclick="useSug('${s.replace(/'/g,"\\'")}')"> ${s}</button>`).join('');
+      d.suggestions.forEach(s => list.appendChild(makeBtn(s)));
     }
   } catch {}
 }
@@ -856,7 +875,7 @@ function addBot(text, data, rowCount, ms, intent) {
   const showTbl = data && data.length > 0 && data.length <= 100;
   if (showTbl) {
     const cols = Object.keys(data[0]);
-    tbl = `<div class="rtwrap"><table class="rtbl"><thead><tr>${cols.map(c=>`<th>${c.replace(/_/g,' ')}</th>`).join('')}</tr></thead><tbody>${data.map(r=>`<tr>${cols.map(c=>`<td>${r[c]??'—'}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+    tbl = `<div class="rtwrap"><table class="rtbl"><thead><tr>${cols.map(c=>`<th>${esc(c.replace(/_/g,' '))}</th>`).join('')}</tr></thead><tbody>${data.map(r=>`<tr>${cols.map(c=>`<td>${esc(String(r[c]??'—'))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
   }
   let badge = '';
   if (ms !== undefined && ms !== null) {
@@ -902,14 +921,14 @@ async function fetchB(pg) {
     } else {
       const stMap = { active:'ba', inactive:'bi', deceased:'bd' };
       tb.innerHTML = items.map(b => `<tr>
-        <td class="mid">${b.beneficiary_id}</td>
-        <td>${b.gender}</td><td>${b.age}</td>
-        <td>${b.district_name || '—'}</td><td>${b.taluka_name || '—'}</td>
-        <td style="color:var(--text3)">${b.village || '—'}</td>
-        <td>${b.category_name || '—'}</td>
+        <td class="mid">${esc(String(b.beneficiary_id))}</td>
+        <td>${esc(b.gender)}</td><td>${esc(String(b.age))}</td>
+        <td>${esc(b.district_name || '—')}</td><td>${esc(b.taluka_name || '—')}</td>
+        <td style="color:var(--text3)">${esc(b.village || '—')}</td>
+        <td>${esc(b.category_name || '—')}</td>
         <td>₹${Number(b.monthly_amount || 0).toLocaleString('en-IN')}</td>
-        <td><span class="bge ${stMap[b.status] || 'bd'}">${b.status}</span></td>
-        <td style="color:var(--text3)">${b.registration_date || '—'}</td>
+        <td><span class="bge ${stMap[b.status] || 'bd'}">${esc(b.status)}</span></td>
+        <td style="color:var(--text3)">${esc(b.registration_date || '—')}</td>
       </tr>`).join('');
     }
     const tp = Math.ceil(bTotal / PS), s = (bPage - 1) * PS;

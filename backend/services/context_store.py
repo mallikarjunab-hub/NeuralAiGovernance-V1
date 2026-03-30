@@ -128,9 +128,9 @@ class ContextStore:
         turn = ConversationTurn(
             question=question,
             resolved_question=resolved_question,
-            answer=answer[:400] + ("…" if len(answer) > 400 else ""),
+            answer=answer[:800] + ("…" if len(answer) > 800 else ""),
             intent=intent,
-            sql_data=sql_data[:10] if sql_data else None,
+            sql_data=sql_data[:50] if sql_data else None,
         )
 
         # ── Update L1 immediately ─────────────────────────────

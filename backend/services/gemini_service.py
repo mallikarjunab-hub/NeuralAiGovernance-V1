@@ -59,7 +59,8 @@ async def classify_intent(question: str, context: list[ConversationTurn] = None)
         r = await _call(prompt, 0.0)
         i = r.strip().upper().split()[0] if r.strip() else "SQL"
         return i if i in ("SQL", "RAG") else "SQL"
-    except:
+    except Exception as e:
+        logger.warning(f"Intent classification failed, defaulting to SQL: {e}")
         return "SQL"
 
 
@@ -124,7 +125,7 @@ async def embed_text(text: str) -> list[float]:
 async def check_health() -> bool:
     try:
         return len(await _call("Say OK", 0.0)) > 0
-    except:
+    except Exception:
         return False
 
 
@@ -168,7 +169,7 @@ def _is_num(v):
     try:
         float(str(v))
         return True
-    except:
+    except (ValueError, TypeError):
         return False
 
 def _clean_sql(raw: str) -> str:
