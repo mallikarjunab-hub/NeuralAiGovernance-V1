@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Neural AI Governance – DSSY | Directorate of Social Welfare, Govt. of Goa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --b1:#003580;--b2:#0047ad;--b3:#1a5dc8;--b4:#d6e4ff;--b5:#edf3ff;--b6:#f4f7ff;
+  --white:#ffffff;--border:#c7d9f5;--border2:#dce8ff;
+  --text:#0a1f44;--text2:#1e3a6e;--text3:#4a6fa5;--text4:#8faad4;
+  --r:12px;--r-sm:7px;
+  --sh:0 1px 4px rgba(0,53,128,.08),0 4px 16px rgba(0,53,128,.06);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:14px}
+body{font-family:'DM Sans',sans-serif;background:var(--b6);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+.hdr{background:var(--b1);color:#fff;position:sticky;top:0;z-index:200;border-bottom:1px solid rgba(255,255,255,.12)}
+.hdr-top{display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:64px}
+.hdr-brand{display:flex;align-items:center;gap:16px}
+.hdr-emblem{width:44px;height:44px;background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.22);border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.hdr-divider{width:1px;height:32px;background:rgba(255,255,255,.2)}
+.hdr-govt{display:flex;flex-direction:column;gap:1px}
+.hdr-govt-main{font-size:15px;font-weight:700;color:#fff;letter-spacing:-.2px;font-family:'DM Serif Display',serif}
+.hdr-govt-sub{font-size:10.5px;color:rgba(255,255,255,.55);letter-spacing:.2px}
+.hdr-right{display:flex;align-items:center;gap:14px}
+.sys-pill{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);padding:5px 13px;border-radius:20px;font-size:11.5px;color:rgba(255,255,255,.8);font-weight:500}
+.dot{width:6px;height:6px;border-radius:50%;background:#60a5fa}
+.dot.ok{background:#60a5fa;box-shadow:0 0 0 2px rgba(96,165,250,.25)}
+.dot.err{background:#f87171}
+@keyframes breathe{0%,100%{opacity:1}50%{opacity:.4}}
+.dot{animation:breathe 2.4s ease-in-out infinite}
+footer{background:var(--white);border-top:1px solid var(--border);padding:10px 28px;display:flex;align-items:center;justify-content:space-between}
+.ft-left{font-size:11px;color:var(--text4)}
+.ft-right{font-size:11px;color:var(--text4)}
+.ft-right span{color:var(--text3);font-weight:500}
+.nav{background:var(--white);border-bottom:1px solid var(--border);display:flex;padding:0 28px;gap:2px}
+.nb{padding:13px 18px;font-size:13px;font-weight:500;color:var(--text3);background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;display:flex;align-items:center;gap:7px;transition:all .18s;font-family:inherit}
+.nb:hover{color:var(--b1)}
+.nb.on{color:var(--b1);border-bottom-color:var(--b1);font-weight:700}
+.main{flex:1;padding:22px 28px;max-width:1440px;margin:0 auto;width:100%}
+.view{display:none}.view.on{display:block}
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:16px}
+.kpi{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;box-shadow:var(--sh);position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--b1),var(--b3))}
+.kpi-lbl{font-size:10.5px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:.7px;margin-bottom:9px}
+.kpi-val{font-size:30px;font-weight:700;color:var(--b1);line-height:1;margin-bottom:5px;font-family:'DM Serif Display',serif}
+.kpi-sub{font-size:11.5px;color:var(--text3)}
+.cstrip{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+.cc{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:14px 18px;display:flex;align-items:center;gap:13px;box-shadow:var(--sh)}
+.cc-ico{width:40px;height:40px;border-radius:9px;background:var(--b5);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.cc-val{font-size:22px;font-weight:700;color:var(--b1);font-family:'DM Serif Display',serif}
+.cc-lbl{font-size:11px;color:var(--text4);margin-top:2px;font-weight:500}
+.ch2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.cc2{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:18px;box-shadow:var(--sh)}
+.chd{font-size:13px;font-weight:600;color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.chd-dot{width:8px;height:8px;border-radius:50%;background:var(--b2);flex-shrink:0}
+.chw{position:relative;height:230px}
+.chw.sm{height:190px}
+.mt{width:100%;border-collapse:collapse;font-size:12.5px}
+.mt th{background:var(--b5);padding:8px 12px;text-align:left;font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border)}
+.mt td{padding:9px 12px;border-bottom:1px solid var(--border2)}
+.mt tr:last-child td{border-bottom:none}
+.mt tr:hover td{background:var(--b6)}
+.rnk{width:20px;height:20px;background:var(--b1);color:#fff;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700}
+.pt{background:var(--border2);border-radius:3px;height:4px;overflow:hidden;width:80px}
+.pb2{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--b1),var(--b3))}
+/* CHAT */
+.chat-wrap{display:grid;grid-template-columns:280px 1fr;gap:18px;height:calc(100vh - 160px)}
+.chat-side{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:16px;overflow-y:auto;box-shadow:var(--sh)}
+.sug-cat{margin-bottom:12px}
+.sug-cat-hd{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;padding:6px 0 4px;border-bottom:1px solid var(--border2)}
+.edge-badge{margin-top:8px;font-size:11px;color:#6b46c1;font-weight:600;letter-spacing:.2px}
+/* LANGUAGE TOGGLE */
+.lng-section{margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border2)}
+.lng-lbl{font-size:10px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:.7px;margin-bottom:7px}
+.lng-row{display:flex;gap:5px}
+.lng-btn{flex:1;padding:6px 4px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:11.5px;font-weight:600;color:var(--text3);background:var(--b6);cursor:pointer;text-align:center;transition:all .15s;font-family:'DM Sans',sans-serif;line-height:1.3}
+.lng-btn:hover{border-color:var(--b3);color:var(--b2);background:var(--b5)}
+.lng-btn.on{background:var(--b1);color:#fff;border-color:var(--b1)}
+.side-hd{font-size:10.5px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border2)}
+.chip{display:block;width:100%;text-align:left;background:var(--b6);border:1px solid var(--border2);border-radius:var(--r-sm);padding:9px 12px;font-size:12.5px;color:var(--text2);cursor:pointer;margin-bottom:7px;transition:all .15s;line-height:1.45;font-family:'DM Sans',sans-serif}
+.chip:hover{background:var(--b5);border-color:var(--b3);color:var(--b1)}
+.chat-box{background:var(--white);border:1px solid var(--border);border-radius:var(--r);display:flex;flex-direction:column;overflow:hidden;box-shadow:var(--sh)}
+.chat-top{background:var(--b1);padding:14px 20px}
+.chat-top-t{font-size:15px;font-weight:700;color:#fff;font-family:'DM Serif Display',serif}
+.chat-top-s{font-size:11.5px;color:rgba(255,255,255,.55);margin-top:2px}
+.chat-msgs{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px;scroll-behavior:smooth;background:var(--b6)}
+.msg{display:flex;gap:9px}
+.msg.u{flex-direction:row-reverse;align-self:flex-end;max-width:75%}
+.msg.b{align-self:flex-start;max-width:92%}
+.av{width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.msg.u .av{background:var(--b1);color:#fff}
+.msg.b .av{background:var(--b3);color:#fff;font-size:10px}
+.bbl{padding:11px 15px;border-radius:14px;font-size:13.5px;line-height:1.6}
+.msg.u .bbl{background:var(--b1);color:#fff;border-bottom-right-radius:3px}
+.msg.b .bbl{background:var(--white);color:var(--text);border:1px solid var(--border);border-bottom-left-radius:3px}
+.mtime{font-size:10px;color:var(--text4);margin-top:4px}
+.msg.u .mtime{text-align:right}
+.rtwrap{margin-top:12px;border-radius:8px;border:1px solid var(--border);overflow:hidden;max-height:240px;overflow-y:auto}
+.rtbl{width:100%;border-collapse:collapse;font-size:12px}
+.rtbl th{background:var(--b1);color:#fff;padding:8px 12px;text-align:left;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.3px;position:sticky;top:0}
+.rtbl td{padding:7px 12px;border-bottom:1px solid var(--border2)}
+.rtbl tr:last-child td{border-bottom:none}
+.rtbl tr:nth-child(even) td{background:var(--b6)}
+.qcwrap{margin-top:12px;background:var(--b6);border:1px solid var(--border2);border-radius:9px;padding:14px}
+.qchd{font-size:11.5px;font-weight:600;color:var(--text3);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}
+.qctog{display:flex;gap:4px}
+.ctb{padding:3px 9px;border-radius:5px;font-size:11px;border:1px solid var(--border);background:var(--white);cursor:pointer;color:var(--text3);font-family:inherit;transition:all .15s}
+.ctb.on{background:var(--b1);color:#fff;border-color:var(--b1)}
+.qch{height:195px;position:relative}
+.meta{display:inline-flex;align-items:center;gap:5px;background:var(--b5);border:1px solid var(--border2);border-radius:20px;padding:3px 10px;font-size:10.5px;color:var(--text3);margin-top:8px}
+.rag-badge{display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:20px;padding:3px 10px;font-size:10.5px;color:#15803d;margin-top:8px;font-weight:500}
+.tdot{width:6px;height:6px;background:var(--b3);border-radius:50%;display:inline-block;animation:tb .9s infinite ease-in-out;margin:0 2px}
+.tdot:nth-child(2){animation-delay:.15s}.tdot:nth-child(3){animation-delay:.3s}
+@keyframes tb{0%,100%{transform:translateY(0);opacity:.35}50%{transform:translateY(-5px);opacity:1}}
+/* INPUT ROW */
+.chat-foot{padding:12px 18px;border-top:1px solid var(--border);background:var(--white)}
+.irow{display:flex;gap:8px;align-items:flex-end}
+.qinp{flex:1;padding:11px 16px;border:1.5px solid var(--border);border-radius:22px;font-size:13.5px;outline:none;resize:none;min-height:42px;max-height:110px;font-family:'DM Sans',sans-serif;background:var(--b6);color:var(--text);transition:border-color .18s,background .18s;line-height:1.45}
+.qinp:focus{border-color:var(--b2);background:#fff}
+/* MIC BUTTON — professional SVG icon */
+.mic-btn{width:42px;height:42px;background:var(--b5);border:1.5px solid var(--border);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s;flex-shrink:0;color:var(--b2)}
+.mic-btn:hover{background:var(--b4);border-color:var(--b3)}
+.mic-btn.recording{background:#fef2f2;border-color:#f87171;color:#ef4444}
+.mic-btn.recording svg{animation:mic-pulse .8s ease-in-out infinite}
+@keyframes mic-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+.mic-status{font-size:10px;color:var(--text4);text-align:center;margin-top:5px;min-height:13px;letter-spacing:.1px}
+.mic-status.active{color:#ef4444;font-weight:600}
+/* SEND BUTTON */
+.sbtn{width:42px;height:42px;background:var(--b1);color:#fff;border:none;border-radius:50%;cursor:pointer;font-size:17px;display:flex;align-items:center;justify-content:center;transition:all .18s;flex-shrink:0}
+.sbtn:hover{background:var(--b2);transform:scale(1.06)}
+.sbtn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+/* EMPTY */
+.empt{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px;gap:12px}
+.ei{font-size:44px}
+.empt h3{font-size:17px;font-weight:600;color:var(--text2);font-family:'DM Serif Display',serif}
+.empt p{font-size:13px;color:var(--text3);max-width:320px;line-height:1.65}
+/* BENEFICIARIES */
+.tc{background:var(--white);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden}
+.tbar{display:flex;align-items:center;justify-content:space-between;padding:13px 18px;border-bottom:1px solid var(--border);background:var(--b5);flex-wrap:wrap;gap:10px}
+.tbar-t{font-size:14px;font-weight:600;color:var(--text)}
+.fltrs{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.fsel,.fsrch{padding:7px 11px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:12.5px;outline:none;font-family:inherit;background:#fff;color:var(--text);transition:border-color .15s}
+.fsel:focus,.fsrch:focus{border-color:var(--b2)}
+.fsrch{width:200px}
+.dtw{overflow-x:auto}
+.dt{width:100%;border-collapse:collapse;font-size:12.5px}
+.dt th{background:var(--b1);color:#fff;padding:10px 14px;text-align:left;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+.dt td{padding:9px 14px;border-bottom:1px solid var(--border2)}
+.dt tr:hover td{background:var(--b6)}
+.bge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600}
+.ba{background:#dbeafe;color:#1e40af}.bi{background:#bfdbfe;color:#1d4ed8}.bd{background:var(--border2);color:var(--text3)}
+.mid{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--b2)}
+.pgn{display:flex;align-items:center;justify-content:space-between;padding:11px 18px;border-top:1px solid var(--border);font-size:12.5px;color:var(--text3)}
+.pgb{display:flex;gap:4px}
+.pb{padding:5px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer;background:#fff;font-size:12.5px;color:var(--text3);font-family:inherit;transition:all .15s}
+.pb:hover,.pb.on{background:var(--b1);color:#fff;border-color:var(--b1)}
+.pb:disabled{opacity:.4;cursor:not-allowed}
+/* POWERBI */
+.pbi-wrap{width:100%;height:calc(100vh - 160px);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh);border:1px solid var(--border);background:var(--white)}
+.pbi-wrap iframe{width:100%;height:100%;border:none;display:block}
+@media(max-width:1100px){.kpi-row{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:800px){.ch2{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr 1fr}.cstrip{grid-template-columns:1fr 1fr}.chat-wrap{grid-template-columns:1fr}.chat-side{display:none}.main{padding:14px}}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-top">
+    <div class="hdr-brand">
+      <div class="hdr-emblem">🏛️</div>
+      <div class="hdr-divider"></div>
+      <div class="hdr-govt">
+        <div class="hdr-govt-main">Neural AI Governance — DSSY</div>
+        <div class="hdr-govt-sub">Directorate of Social Welfare &nbsp;·&nbsp; Government of Goa &nbsp;·&nbsp; Dayanand Social Security Scheme</div>
+      </div>
+    </div>
+    <div class="hdr-right">
+      <div class="sys-pill">
+        <div class="dot ok" id="sDot"></div>
+        <span id="sLbl">Connecting…</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<nav class="nav">
+  <button class="nb on" onclick="go('dash',this)">Dashboard</button>
+  <button class="nb" onclick="go('chat',this)">AI Query Interface</button>
+  <button class="nb" onclick="go('bens',this)">Beneficiary Records</button>
+</nav>
+
+<div class="main">
+
+  <!-- DASHBOARD — PowerBI -->
+  <div class="view on" id="v-dash">
+    <div class="pbi-wrap">
+      <iframe
+        src="https://app.powerbi.com/view?r=eyJrIjoiNWEzZGYwOWItNGY2NS00ODhkLWJlYzItZDI3YzY3ZDQ1ZWJkIiwidCI6IjhlNDU1OTYxLTRiZjMtNGYwMi05M2Q0LWE2NzFmMmYxMWNmOSJ9"
+        allowfullscreen
+        title="DSSY Power BI Dashboard">
+      </iframe>
+    </div>
+  </div>
+
+  <!-- CHAT -->
+  <div class="view" id="v-chat">
+    <div class="chat-wrap">
+      <aside class="chat-side">
+
+        <!-- Language Toggle -->
+        <div class="lng-section">
+          <div class="lng-lbl">Response Language</div>
+          <div class="lng-row">
+            <button class="lng-btn on" id="lng-en" onclick="setLang('en',this)">EN</button>
+            <button class="lng-btn" id="lng-hi" onclick="setLang('hi',this)">हिंदी</button>
+            <button class="lng-btn" id="lng-te" onclick="setLang('te',this)">తెలుగు</button>
+          </div>
+        </div>
+
+        <div class="side-hd">Standard Queries</div>
+        <div id="sugList"></div>
+      </aside>
+
+      <div class="chat-box">
+        <div class="chat-top">
+          <div class="chat-top-t">DSSY Conversational Intelligence</div>
+          <div class="chat-top-s">Statistical analysis model for DSSY — database queries + scheme knowledge + smart responses</div>
+        </div>
+        <div class="chat-msgs" id="cMsgs">
+          <div class="empt" id="empt">
+            <div class="ei">🏛️</div>
+            <h3>DSSY AI Query Interface</h3>
+            <p>I'm a statistical analysis model for the Dayanand Social Security Scheme. Ask about beneficiary data, scheme eligibility, or administrative analytics in English, Hindi, or Telugu.</p>
+          </div>
+        </div>
+        <div class="chat-foot">
+          <div class="irow">
+            <textarea class="qinp" id="qinp" placeholder="e.g. How many active beneficiaries are in each taluka?" rows="1"></textarea>
+            <button class="mic-btn" id="micBtn" onclick="toggleMic()" title="Voice input">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="23"/>
+                <line x1="8" y1="23" x2="16" y2="23"/>
+              </svg>
+            </button>
+            <button class="sbtn" id="sBtn" onclick="doSend()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+            </button>
+          </div>
+          <div class="mic-status" id="micStatus"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BENEFICIARIES -->
+  <div class="view" id="v-bens">
+    <div class="tc">
+      <div class="tbar">
+        <div class="tbar-t">Beneficiary Records</div>
+        <div class="fltrs">
+          <select class="fsel" id="fSt" onchange="loadB()"><option value="active">Active</option><option value="">All Status</option><option value="inactive">Inactive</option><option value="deceased">Deceased</option></select>
+          <select class="fsel" id="fDi" onchange="loadB()"><option value="">All Districts</option><option value="1">North Goa</option><option value="2">South Goa</option></select>
+          <select class="fsel" id="fCa" onchange="loadB()"><option value="">All Categories</option><option value="1">Senior Citizen</option><option value="2">Widow</option><option value="3">Single Woman</option><option value="4">Disabled</option><option value="5">HIV/AIDS</option></select>
+          <input class="fsrch" id="fsrch" type="text" placeholder="🔍 Search ID / village…" oninput="dSearch()"/>
+        </div>
+      </div>
+      <div class="dtw">
+        <table class="dt">
+          <thead><tr><th>ID</th><th>Gender</th><th>Age</th><th>District</th><th>Taluka</th><th>Village</th><th>Category</th><th>Monthly ₹</th><th>Status</th><th>Registered</th></tr></thead>
+          <tbody id="bTb"><tr><td colspan="10" style="text-align:center;padding:40px;color:var(--text4)">Loading…</td></tr></tbody>
+        </table>
+      </div>
+      <div class="pgn"><span id="pgI">—</span><div class="pgb" id="pgB"></div></div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <div class="ft-left">© 2026 Directorate of Social Welfare, Government of Goa. All data is confidential and for authorised use only.</div>
+  <div class="ft-right">Developed by <span>Bharath Lighthouse Software Solutions Pvt. Ltd.</span></div>
+</footer>
+
+<script>
+const BASE = '';
+const PAL  = ['#003580','#0047ad','#1a5dc8','#3b82f6','#60a5fa','#93c5fd','#bfdbfe','#dbeafe'];
+let CI = {}, bPage = 1, bTotal = 0, sTimer = null, curLang = 'en';
+const PS = 20;
+
+// ── LANGUAGE ──────────────────────────────────────────────────────────────────
+const LANG_LABELS = { en:'EN', hi:'हिंदी', te:'తెలుగు' };
+const LANG_SPEECH  = { en:'en-IN', hi:'hi-IN', te:'te-IN' };
+const LANG_PLACEHOLDER = {
+  en: 'e.g. How many active beneficiaries are in each taluka?',
+  hi: 'जैसे: प्रत्येक तालुका में कितने सक्रिय लाभार्थी हैं?',
+  te: 'ఉదా: ప్రతి తాలూకాలో ఎంత మంది లబ్ధిదారులు ఉన్నారు?',
+};
+
+function setLang(lang, btn) {
+  curLang = lang;
+  document.querySelectorAll('.lng-btn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  qs('#qinp').placeholder = LANG_PLACEHOLDER[lang] || LANG_PLACEHOLDER.en;
+}
+
+// ── VOICE / MIC ───────────────────────────────────────────────────────────────
+let recognition = null, isRecording = false;
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+function toggleMic() {
+  if (!SpeechRecognition) {
+    showMicStatus('Voice input not supported in this browser. Try Chrome.', false);
+    return;
+  }
+  if (isRecording) { stopMic(); return; }
+  startMic();
+}
+
+function startMic() {
+  recognition = new SpeechRecognition();
+  recognition.lang = LANG_SPEECH[curLang] || 'en-IN';
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+  recognition.continuous = false;
+
+  recognition.onstart = () => {
+    isRecording = true;
+    qs('#micBtn').classList.add('recording');
+    showMicStatus('Listening… speak now', true);
+  };
+
+  recognition.onresult = (e) => {
+    const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
+    qs('#qinp').value = transcript;
+    qs('#qinp').style.height = 'auto';
+    qs('#qinp').style.height = Math.min(qs('#qinp').scrollHeight, 110) + 'px';
+    if (e.results[e.results.length - 1].isFinal) {
+      showMicStatus('Voice captured — press send', false);
+    }
+  };
+
+  recognition.onerror = (e) => {
+    stopMic();
+    const msgs = { 'not-allowed':'Microphone permission denied.', 'no-speech':'No speech detected. Try again.', 'network':'Network error.' };
+    showMicStatus(msgs[e.error] || 'Voice error. Try again.', false);
+  };
+
+  recognition.onend = () => { stopMic(); };
+
+  try { recognition.start(); }
+  catch(e) { showMicStatus('Could not start microphone.', false); }
+}
+
+function stopMic() {
+  isRecording = false;
+  qs('#micBtn').classList.remove('recording');
+  if (recognition) { try { recognition.stop(); } catch(e) {} recognition = null; }
+}
+
+function showMicStatus(msg, active) {
+  const el = qs('#micStatus');
+  el.textContent = msg;
+  el.className = 'mic-status' + (active ? ' active' : '');
+  if (!active && msg) setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 3000);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  await chkHealth();
+  await loadSugs();
+  setupInput();
+  addWelcome();
+});
+
+// ── HEALTH ────────────────────────────────────────────────────────────────────
+async function chkHealth() {
+  try {
+    const d = await (await fetch(`${BASE}/health`)).json();
+    const ok = d.status === 'healthy';
+    qs('#sDot').className = 'dot' + (ok ? ' ok' : ' err');
+    const bq = d.bigquery === 'connected' ? '✓' : '✗';
+    const neon = d.neon_pgvector === 'connected' ? '✓' : '✗';
+    qs('#sLbl').textContent = ok ? 'System Online' : `Degraded (BQ:${bq} RAG:${neon})`;
+  } catch { qs('#sDot').className = 'dot err'; qs('#sLbl').textContent = 'Offline'; }
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────────────────
+async function loadDash() {
+  try {
+    const res = await (await fetch(`${BASE}/api/analytics/dashboard`)).json();
+    if (res.status !== 'ok') return;
+    const d = res.data;
+    set('kT', fmt(d.total_beneficiaries));
+    set('kA', fmt(d.active_beneficiaries));
+    set('kAs', ((d.active_beneficiaries / d.total_beneficiaries) * 100).toFixed(1) + '% of total');
+    set('kP', '₹' + fmt(Math.round(d.total_monthly_payout)));
+    set('kI', fmt(d.inactive_beneficiaries));
+    set('kN', fmt(d.recent_additions));
+    const pc = d.payment_compliance || {};
+    set('cPd', fmt(pc.paid || 0)); set('cPn', fmt(pc.pending || 0));
+    set('cFl', fmt(pc.failed || 0)); set('cCr', (pc.compliance_pct || 0) + '%');
+    pie('cCat', d.by_category.map(x => x.category), d.by_category.map(x => x.count));
+    donut('cGen', d.by_gender.map(x => x.gender), d.by_gender.map(x => x.count));
+    bar('cDist', d.by_district.map(x => x.district), d.by_district.map(x => x.count));
+    line('cTrend', d.registration_trend.map(x => x.period), d.registration_trend.map(x => x.count));
+    if (d.age_distribution) hbar('cAge', d.age_distribution.map(x => x.age_group), d.age_distribution.map(x => x.count));
+    if (d.top_talukas) {
+      const mx = Math.max(...d.top_talukas.map(t => t.count));
+      qs('#tTaluka tbody').innerHTML = d.top_talukas.map((t, i) => `<tr>
+        <td><span class="rnk">${i + 1}</span></td>
+        <td><strong>${t.taluka}</strong></td>
+        <td style="color:var(--text3)">${t.district}</td>
+        <td><strong>${fmt(t.count)}</strong></td>
+        <td><div class="pt"><div class="pb2" style="width:${(t.count / mx * 100).toFixed(0)}%"></div></div></td>
+      </tr>`).join('');
+    }
+  } catch (e) { console.error('Dashboard error:', e); }
+}
+
+// ── CHARTS ────────────────────────────────────────────────────────────────────
+const LOPT = { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { font: { family: 'DM Sans', size: 12 }, padding: 14 } } } };
+const AOPT = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: '#dce8ff' }, ticks: { font: { family: 'DM Sans', size: 11 }, color: '#4a6fa5' } }, y: { grid: { color: '#dce8ff' }, ticks: { font: { family: 'DM Sans', size: 11 }, color: '#4a6fa5' } } } };
+function kill(id) { if (CI[id]) { CI[id].destroy(); delete CI[id]; } }
+function pie(id, labels, data)  { kill(id); CI[id] = new Chart(qs('#' + id), { type: 'pie',      data: { labels, datasets: [{ data, backgroundColor: PAL, borderWidth: 2, borderColor: '#fff' }] }, options: { ...LOPT, plugins: { ...LOPT.plugins, legend: { ...LOPT.plugins.legend, position: 'right' } } } }); }
+function donut(id, labels, data){ kill(id); CI[id] = new Chart(qs('#' + id), { type: 'doughnut', data: { labels, datasets: [{ data, backgroundColor: PAL, borderWidth: 2, borderColor: '#fff' }] }, options: { ...LOPT, plugins: { ...LOPT.plugins, legend: { ...LOPT.plugins.legend, position: 'right' } } } }); }
+function bar(id, labels, data)  { kill(id); CI[id] = new Chart(qs('#' + id), { type: 'bar',      data: { labels, datasets: [{ data, backgroundColor: '#003580', borderRadius: 6 }] }, options: { ...AOPT } }); }
+function hbar(id, labels, data) { kill(id); CI[id] = new Chart(qs('#' + id), { type: 'bar',      data: { labels, datasets: [{ data, backgroundColor: PAL, borderRadius: 5 }] }, options: { ...AOPT, indexAxis: 'y' } }); }
+function line(id, labels, data) { kill(id); CI[id] = new Chart(qs('#' + id), { type: 'line',     data: { labels, datasets: [{ data, borderColor: '#003580', backgroundColor: 'rgba(0,53,128,.08)', tension: .4, fill: true, pointRadius: 3, pointBackgroundColor: '#003580' }] }, options: { ...AOPT, plugins: { legend: { display: false } } } }); }
+
+// ── QUERY CHART ───────────────────────────────────────────────────────────────
+let qIdx = 0;
+function buildQueryChart(data, cid) {
+  if (!data || data.length < 2) return;
+  const cols = Object.keys(data[0]); if (cols.length < 2) return;
+  const numCols = cols.filter(c => data.every(r => !isNaN(parseFloat(r[c])) && r[c] !== null && r[c] !== ''));
+  const lblCols = cols.filter(c => !numCols.includes(c));
+  if (!numCols.length || !lblCols.length) return;
+  const lc = lblCols[0], vc = numCols[0];
+  const labels = data.map(r => String(r[lc]).length > 18 ? String(r[lc]).slice(0, 16) + '…' : String(r[lc]));
+  const values = data.map(r => parseFloat(r[vc]) || 0);
+  const isTime = /month|period|year|date/i.test(lc);
+  const isFew = labels.length <= 6;
+  const def = isTime ? 'line' : isFew ? 'doughnut' : 'bar';
+  const cid2 = 'qc_' + qIdx++;
+  const wrap = document.getElementById(cid); if (!wrap) return;
+  wrap.innerHTML = `<div class="qchd">
+    <span><strong>${vc.replace(/_/g,' ')}</strong> by <strong>${lc.replace(/_/g,' ')}</strong></span>
+    <div class="qctog">
+      <button class="ctb ${def==='bar'?'on':''}" onclick="swQC('${cid2}','bar',this)">Bar</button>
+      <button class="ctb ${def==='doughnut'?'on':''}" onclick="swQC('${cid2}','doughnut',this)">Donut</button>
+      <button class="ctb ${def==='line'?'on':''}" onclick="swQC('${cid2}','line',this)">Line</button>
+    </div></div>
+    <div class="qch"><canvas id="${cid2}"></canvas></div>`;
+  window._QD = window._QD || {}; window._QD[cid2] = { labels, values }; rQC(cid2, def);
+}
+
+function rQC(cid, type) {
+  const { labels, values } = window._QD[cid]; kill(cid);
+  const cv = document.getElementById(cid); if (!cv) return;
+  if (type === 'bar')     CI[cid] = new Chart(cv, { type:'bar',      data:{labels,datasets:[{data:values,backgroundColor:'#003580',borderRadius:6}]}, options:{...AOPT} });
+  else if(type==='doughnut') CI[cid] = new Chart(cv, { type:'doughnut', data:{labels,datasets:[{data:values,backgroundColor:PAL,borderWidth:2,borderColor:'#fff'}]}, options:{...LOPT,plugins:{...LOPT.plugins,legend:{labels:{font:{family:'DM Sans',size:11}},position:'right'}}} });
+  else CI[cid] = new Chart(cv, { type:'line', data:{labels,datasets:[{data:values,borderColor:'#0047ad',backgroundColor:'rgba(0,71,173,.08)',tension:.4,fill:true,pointRadius:3,pointBackgroundColor:'#0047ad'}]}, options:{...AOPT,plugins:{legend:{display:false}}} });
+}
+function swQC(cid, type, btn) { btn.closest('.qctog').querySelectorAll('.ctb').forEach(b=>b.classList.remove('on')); btn.classList.add('on'); rQC(cid,type); }
+
+// ── CHAT ──────────────────────────────────────────────────────────────────────
+function addWelcome() {
+  addBot("Namaste! I am the DSSY Statistical Analysis Assistant for the Department of Social Welfare, Government of Goa.\n\nI can assist you with:\n\n  Beneficiary statistics — district, taluka, and category-wise counts\n  Scheme information — eligibility, financial assistance, and application procedures\n  Analytical queries — trends, comparisons, and payment compliance\n\nHow may I assist you today?", null, null, null, null);
+}
+
+async function loadSugs() {
+  try {
+    const d = await (await fetch(`${BASE}/api/query/suggestions`)).json();
+    if (d.categories) {
+      let html = '';
+      for (const [cat, items] of Object.entries(d.categories)) {
+        html += `<div class="sug-cat"><div class="sug-cat-hd">${cat}</div>`;
+        html += items.map(s => `<button class="chip" onclick="useSug('${s.replace(/'/g,"\\'")}')">${s}</button>`).join('');
+        html += `</div>`;
+      }
+      qs('#sugList').innerHTML = html;
+    } else if (d.suggestions) {
+      qs('#sugList').innerHTML = d.suggestions.map(s => `<button class="chip" onclick="useSug('${s.replace(/'/g,"\\'")}')"> ${s}</button>`).join('');
+    }
+  } catch {}
+}
+function useSug(t) { qs('#qinp').value = t; go('chat', qsa('.nb')[1]); qs('#qinp').focus(); }
+
+function setupInput() {
+  const i = qs('#qinp');
+  i.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); } });
+  i.addEventListener('input',   () => { i.style.height = 'auto'; i.style.height = Math.min(i.scrollHeight, 110) + 'px'; });
+}
+
+async function doSend() {
+  const i = qs('#qinp'), q = i.value.trim(); if (!q) return;
+  i.value = ''; i.style.height = 'auto';
+  stopMic(); showMicStatus('', false);
+  const em = qs('#empt'); if (em) em.remove();
+  addUser(q);
+  const tid = addTyping();
+  qs('#sBtn').disabled = true;
+
+  // 90-second timeout — Gemini can be slow on complex NL-to-SQL queries
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 90000);
+
+  try {
+    const r = await fetch(`${BASE}/api/query`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: q, language: curLang, include_sql: false }),
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    const d = await r.json();
+    removeTyping(tid);
+    r.ok ? addBot(d.answer, d.data, d.row_count, d.execution_time_ms, d.intent)
+          : addBot('⚠️ ' + (d.detail || 'An error occurred.'), null, null, null, null);
+  } catch (err) {
+    clearTimeout(timeoutId);
+    removeTyping(tid);
+    if (err.name === 'AbortError') {
+      addBot('⏱️ Request timed out (90s). The server may be processing a complex query — please try again or rephrase your question.', null, null, null, null);
+    } else {
+      addBot('❌ Connection error. Please check the server is running.', null, null, null, null);
+    }
+  } finally { qs('#sBtn').disabled = false; }
+}
+
+function addUser(text) {
+  qs('#cMsgs').insertAdjacentHTML('beforeend', `<div class="msg u"><div class="av">U</div><div><div class="bbl">${esc(text)}</div><div class="mtime">${now()}</div></div></div>`);
+  scrl();
+}
+
+function addBot(text, data, rowCount, ms, intent) {
+  const cid = 'qcwrap_' + Date.now();
+  let tbl = '';
+  const showTbl = data && data.length > 0 && data.length <= 100;
+  if (showTbl) {
+    const cols = Object.keys(data[0]);
+    tbl = `<div class="rtwrap"><table class="rtbl"><thead><tr>${cols.map(c=>`<th>${c.replace(/_/g,' ')}</th>`).join('')}</tr></thead><tbody>${data.map(r=>`<tr>${cols.map(c=>`<td>${r[c]??'—'}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  }
+  let badge = '';
+  if (ms !== undefined && ms !== null) {
+    if (intent === 'EDGE')
+      badge = '';
+    else if (intent === 'RAG')
+      badge = '';
+    else
+      badge = `<div class="meta">${rowCount} result${rowCount===1?'':'s'} · ${ms}ms</div>`;
+  }
+  const chartDiv = showTbl && data.length > 1 ? `<div class="qcwrap" id="${cid}"></div>` : '';
+  qs('#cMsgs').insertAdjacentHTML('beforeend', `<div class="msg b"><div class="av">AI</div><div style="flex:1;min-width:0"><div class="bbl">${esc(text)}${tbl}${chartDiv}${badge}</div><div class="mtime">${now()}</div></div></div>`);
+  if (showTbl && data.length > 1) buildQueryChart(data, cid);
+  scrl();
+}
+
+function addTyping() {
+  const id = 'ty' + Date.now();
+  qs('#cMsgs').insertAdjacentHTML('beforeend', `<div class="msg b" id="${id}"><div class="av">AI</div><div><div class="bbl" style="padding:14px 16px"><span class="tdot"></span><span class="tdot"></span><span class="tdot"></span></div></div></div>`);
+  scrl(); return id;
+}
+function removeTyping(id) { const e = qs('#' + id); if (e) e.remove(); }
+function scrl() { const m = qs('#cMsgs'); m.scrollTop = m.scrollHeight; }
+
+// ── BENEFICIARIES ─────────────────────────────────────────────────────────────
+function dSearch() { clearTimeout(sTimer); sTimer = setTimeout(() => loadB(), 400); }
+function loadB()   { bPage = 1; fetchB(); }
+async function fetchB(pg) {
+  if (pg) bPage = pg;
+  const tb = qs('#bTb');
+  tb.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--text4)">Loading…</td></tr>`;
+  const p = new URLSearchParams({ page: bPage, page_size: PS });
+  const st = qs('#fSt').value, di = qs('#fDi').value, ca = qs('#fCa').value;
+  if (st) p.append('status', st); if (di) p.append('district_id', di); if (ca) p.append('category_id', ca);
+  try {
+    const d = await (await fetch(`${BASE}/api/beneficiaries?${p}`)).json();
+    bTotal = d.total || 0;
+    const q = qs('#fsrch').value.toLowerCase();
+    let items = d.items || [];
+    if (q) items = items.filter(r => Object.values(r).some(v => String(v).toLowerCase().includes(q)));
+    if (!items.length) {
+      tb.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--text4)">No records found</td></tr>`;
+    } else {
+      const stMap = { active:'ba', inactive:'bi', deceased:'bd' };
+      tb.innerHTML = items.map(b => `<tr>
+        <td class="mid">${b.beneficiary_id}</td>
+        <td>${b.gender}</td><td>${b.age}</td>
+        <td>${b.district_name || '—'}</td><td>${b.taluka_name || '—'}</td>
+        <td style="color:var(--text3)">${b.village || '—'}</td>
+        <td>${b.category_name || '—'}</td>
+        <td>₹${Number(b.monthly_amount || 0).toLocaleString('en-IN')}</td>
+        <td><span class="bge ${stMap[b.status] || 'bd'}">${b.status}</span></td>
+        <td style="color:var(--text3)">${b.registration_date || '—'}</td>
+      </tr>`).join('');
+    }
+    const tp = Math.ceil(bTotal / PS), s = (bPage - 1) * PS;
+    set('pgI', `Showing ${s+1}–${Math.min(s+PS,bTotal)} of ${bTotal.toLocaleString('en-IN')} records`);
+    const st2 = Math.max(1, bPage - 2), en = Math.min(tp, st2 + 4);
+    qs('#pgB').innerHTML =
+      `<button class="pb" onclick="fetchB(${bPage-1})" ${bPage===1?'disabled':''}>‹</button>` +
+      Array.from({length:en-st2+1},(_,i)=>st2+i).map(p=>`<button class="pb${p===bPage?' on':''}" onclick="fetchB(${p})">${p}</button>`).join('') +
+      `<button class="pb" onclick="fetchB(${bPage+1})" ${bPage===tp?'disabled':''}>›</button>`;
+  } catch (e) {
+    tb.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--b2)">Error: ${e.message}</td></tr>`;
+  }
+}
+
+// ── NAV ───────────────────────────────────────────────────────────────────────
+function go(v, tab) {
+  qsa('.view').forEach(e => e.classList.remove('on'));
+  qsa('.nb').forEach(e => e.classList.remove('on'));
+  qs('#v-' + v).classList.add('on');
+  if (tab) tab.classList.add('on');
+  if (v === 'bens' && bTotal === 0) fetchB(1);
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+function fmt(n) { if (!n) return '0'; n = Number(n); if (n >= 100000) return (n/100000).toFixed(1)+'L'; if (n >= 1000) return (n/1000).toFixed(1)+'K'; return n.toLocaleString('en-IN'); }
+function now()  { return new Date().toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'}); }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>'); }
+function set(id, v) { const e = document.getElementById(id); if (e) e.textContent = v; }
+const qs  = s => document.querySelector(s);
+const qsa = s => document.querySelectorAll(s);
+</script>
+
+</body>
+</html>

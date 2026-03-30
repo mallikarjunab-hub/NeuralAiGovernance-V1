@@ -1,0 +1,44 @@
+# Virtual environments
+myvenv/
+venv/
+env/
+.venv/
+
+# Environment variables (secrets)
+.env
+.env.*
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+*.egg
+
+# Jupyter
+.ipynb_checkpoints/
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Credentials / secrets
+credentials/
+*.pem
+*.key
+
+# Keep requirements but ignore other json at root if sensitive
+# *.json  ← uncomment if needed
+
+# Logs
+*.log
+logs/
