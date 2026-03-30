@@ -160,9 +160,6 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
 .pb{padding:5px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer;background:#fff;font-size:12.5px;color:var(--text3);font-family:inherit;transition:all .15s}
 .pb:hover,.pb.on{background:var(--b1);color:#fff;border-color:var(--b1)}
 .pb:disabled{opacity:.4;cursor:not-allowed}
-/* POWERBI */
-.pbi-wrap{width:100%;height:calc(100vh - 160px);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh);border:1px solid var(--border);background:var(--white)}
-.pbi-wrap iframe{width:100%;height:100%;border:none;display:block}
 @media(max-width:1100px){.kpi-row{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:800px){.ch2{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr 1fr}.cstrip{grid-template-columns:1fr 1fr}.chat-wrap{grid-template-columns:1fr}.chat-side{display:none}.main{padding:14px}}
 </style>
@@ -196,15 +193,99 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
 
 <div class="main">
 
-  <!-- DASHBOARD — PowerBI -->
+  <!-- DASHBOARD — Analytics -->
   <div class="view on" id="v-dash">
-    <div class="pbi-wrap">
-      <iframe
-        src="https://app.powerbi.com/view?r=eyJrIjoiNWEzZGYwOWItNGY2NS00ODhkLWJlYzItZDI3YzY3ZDQ1ZWJkIiwidCI6IjhlNDU1OTYxLTRiZjMtNGYwMi05M2Q0LWE2NzFmMmYxMWNmOSJ9"
-        allowfullscreen
-        title="DSSY Power BI Dashboard">
-      </iframe>
+
+    <!-- KPI Row -->
+    <div class="kpi-row">
+      <div class="kpi">
+        <div class="kpi-lbl">Total Beneficiaries</div>
+        <div class="kpi-val" id="kT">—</div>
+        <div class="kpi-sub">All registered</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-lbl">Active Beneficiaries</div>
+        <div class="kpi-val" id="kA">—</div>
+        <div class="kpi-sub" id="kAs">—</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-lbl">Monthly Payout</div>
+        <div class="kpi-val" id="kP">—</div>
+        <div class="kpi-sub">Active beneficiaries</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-lbl">Inactive</div>
+        <div class="kpi-val" id="kI">—</div>
+        <div class="kpi-sub">Enrolled, not receiving</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-lbl">Deceased</div>
+        <div class="kpi-val" id="kN">—</div>
+        <div class="kpi-sub">On record</div>
+      </div>
     </div>
+
+    <!-- Payment Compliance Strip -->
+    <div class="cstrip">
+      <div class="cc">
+        <div class="cc-ico">✅</div>
+        <div><div class="cc-val" id="cPd">—</div><div class="cc-lbl">Paid Payments</div></div>
+      </div>
+      <div class="cc">
+        <div class="cc-ico">⏳</div>
+        <div><div class="cc-val" id="cPn">—</div><div class="cc-lbl">Pending</div></div>
+      </div>
+      <div class="cc">
+        <div class="cc-ico">❌</div>
+        <div><div class="cc-val" id="cFl">—</div><div class="cc-lbl">Failed</div></div>
+      </div>
+      <div class="cc">
+        <div class="cc-ico">📊</div>
+        <div><div class="cc-val" id="cCr">—</div><div class="cc-lbl">Compliance Rate</div></div>
+      </div>
+    </div>
+
+    <!-- Charts Row 1: Category + Gender -->
+    <div class="ch2">
+      <div class="cc2">
+        <div class="chd"><span class="chd-dot"></span>Beneficiary Distribution by Category</div>
+        <div class="chw"><canvas id="cCat"></canvas></div>
+      </div>
+      <div class="cc2">
+        <div class="chd"><span class="chd-dot"></span>Gender Distribution (Active)</div>
+        <div class="chw"><canvas id="cGen"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Charts Row 2: District + Registration Trend -->
+    <div class="ch2">
+      <div class="cc2">
+        <div class="chd"><span class="chd-dot"></span>District-wise Active Beneficiaries</div>
+        <div class="chw"><canvas id="cDist"></canvas></div>
+      </div>
+      <div class="cc2">
+        <div class="chd"><span class="chd-dot"></span>Registration Trend</div>
+        <div class="chw"><canvas id="cTrend"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Charts Row 3: Age Distribution + Top Talukas -->
+    <div class="ch2">
+      <div class="cc2">
+        <div class="chd"><span class="chd-dot"></span>Age Group Distribution (Active)</div>
+        <div class="chw"><canvas id="cAge"></canvas></div>
+      </div>
+      <div class="cc2">
+        <div class="chd"><span class="chd-dot"></span>Top Talukas by Active Beneficiaries</div>
+        <div style="overflow:auto;max-height:230px">
+          <table class="mt" id="tTaluka">
+            <thead><tr><th>#</th><th>Taluka</th><th>District</th><th>Count</th><th>Share</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- CHAT -->
@@ -405,7 +486,7 @@ async function loadDash() {
     set('kAs', ((d.active_beneficiaries / d.total_beneficiaries) * 100).toFixed(1) + '% of total');
     set('kP', '₹' + fmt(Math.round(d.total_monthly_payout)));
     set('kI', fmt(d.inactive_beneficiaries));
-    set('kN', fmt(d.recent_additions));
+    set('kN', fmt(d.deceased_beneficiaries));
     const pc = d.payment_compliance || {};
     set('cPd', fmt(pc.paid || 0)); set('cPn', fmt(pc.pending || 0));
     set('cFl', fmt(pc.failed || 0)); set('cCr', (pc.compliance_pct || 0) + '%');
