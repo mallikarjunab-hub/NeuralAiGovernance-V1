@@ -718,3 +718,66 @@ const qsa = s => document.querySelectorAll(s);
 
 </body>
 </html>
+
+<!--
+================================================================================
+  DASHBOARD SWITCH GUIDE — Read before showing to CTO
+================================================================================
+
+  TWO VERSIONS AVAILABLE:
+    A) Custom Chart.js Dashboard  — currently ACTIVE (live data from BigQuery)
+    B) Power BI Embedded Report   — commented out below (rich visuals, filters)
+
+  HOW TO SWITCH TO POWER BI:
+  ─────────────────────────────────────────────────────────────────────────────
+  Step 1: In the HTML above, find the block:
+
+      <!-- DASHBOARD — Analytics -->
+      <div class="view on" id="v-dash">
+        ...all the kpi-row, cstrip, ch2 divs...
+      </div>
+
+  Step 2: Wrap it in a comment:
+
+      <!--  CUSTOM DASHBOARD — temporarily hidden
+      <div class="view on" id="v-dash">
+        ...
+      </div>
+      -->
+
+  Step 3: Uncomment the Power BI block below by removing the wrapping
+          HTML comment tags (the ones that say POWERBI START / END).
+
+  HOW TO SWITCH BACK TO CUSTOM:
+  ─────────────────────────────────────────────────────────────────────────────
+  Reverse the steps above. Re-enable the custom dashboard div and
+  re-comment the Power BI block.
+
+================================================================================
+  POWER BI VERSION — uncomment the block below to activate
+================================================================================
+
+<style>
+  .pbi-wrap{width:100%;height:calc(100vh - 130px);border-radius:12px;overflow:hidden;
+            box-shadow:0 1px 4px rgba(0,53,128,.08),0 4px 16px rgba(0,53,128,.06);
+            border:1px solid #c7d9f5;background:#fff}
+  .pbi-wrap iframe{width:100%;height:100%;border:none;display:block}
+</style>
+
+POWERBI START — remove this line to activate
+<div class="view on" id="v-dash">
+  <div class="pbi-wrap">
+    <iframe
+      src="https://app.powerbi.com/view?r=eyJrIjoiNWEzZGYwOWItNGY2NS00ODhkLWJlYzItZDI3YzY3ZDQ1ZWJkIiwidCI6IjhlNDU1OTYxLTRiZjMtNGYwMi05M2Q0LWE2NzFmMmYxMWNmOSJ9"
+      allowfullscreen
+      allow="fullscreen"
+      frameborder="0"
+      loading="lazy"
+      title="DSSY Power BI Dashboard — Department of Social Welfare, Govt. of Goa">
+    </iframe>
+  </div>
+</div>
+POWERBI END — remove this line to activate
+
+================================================================================
+-->
