@@ -71,22 +71,7 @@ On startup, the app will:
 4. Ingest `documents/dssy_knowledge_base.md` into vector chunks
 5. Start serving on `http://localhost:8000`
 
-## Files Changed (v2 → v3)
 
-| File | Change |
-|------|--------|
-| `config.py` | Added `NEON_DATABASE_URL`, `NEON_POOL_SIZE` |
-| `database.py` | **Rewritten** — dual connections: `execute_bq_query()` + `neon_session_context()` |
-| `main.py` | Dual DB startup, both health checks |
-| `schemas.py` | Added `edge_type` field |
-| `services/edge_handler.py` | **NEW** — regex-based edge case detection |
-| `services/gemini_service.py` | BigQuery SQL dialect, expanded examples |
-| `services/rag_service.py` | Uses Neon only (not BigQuery) |
-| `routers/query.py` | 3-way routing (Edge→SQL→RAG), categorized suggestions |
-| `routers/analytics.py` | Date range param, all-talukas, category payout |
-| `routers/beneficiaries.py` | Uses `execute_bq_query` |
-| `routers/rag.py` | Uses `neon_session_context` |
-| `frontend/index.html` | Categorized sidebar, edge badge, dual health status |
 
 ## Edge Case Examples
 
