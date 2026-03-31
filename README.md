@@ -1,4 +1,4 @@
-# Neural AI Governance v3.0 — DSSY Analytics
+# Neural AI Governance  — DSSY Analytics
 
 ## Architecture
 
