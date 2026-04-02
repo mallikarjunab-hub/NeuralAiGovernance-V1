@@ -60,15 +60,21 @@ TABLES (always use fully-qualified names: `edw-pilot.neural.table_name`):
     payment_status   STRING     -- 'paid' | 'pending' | 'failed'
   )
 
-  banks(bank_id INTEGER, ...)
-  dates(date_id INTEGER, ...)
+  banks(bank_id INTEGER, bank_name STRING)
+  dates(date_id INTEGER, date DATE)
+    -- date is the actual calendar date. Use for year/month filtering.
+    -- For payments year filter: JOIN dates pd ON p.date_id = pd.date_id, then EXTRACT(YEAR FROM pd.date)
+    -- For registration year filter: JOIN dates rd ON b.registration_date_id = rd.date_id, then EXTRACT(YEAR FROM rd.date)
 
 CRITICAL JOIN RULES:
   - payments → beneficiaries : JOIN ON payments.beneficiary_key = beneficiaries.beneficiary_key
+  - payments → dates         : JOIN `edw-pilot.neural.dates` pd ON p.date_id = pd.date_id
+  - beneficiaries → dates    : JOIN `edw-pilot.neural.dates` rd ON b.registration_date_id = rd.date_id
   - beneficiaries has NO village column — always JOIN villages ON b.village_id = v.village_id
   - beneficiaries date column is 'dob', NOT 'date_of_birth'
   - payments amount column is 'amount', NOT 'payment_amount'
-  - payments has NO payment_date column
+  - payments has NO payment_date column — use dates table JOIN for time filtering
+  - categories table has more entries than the common 5 — always query it, never assume all category names
 """
 
 # ── Few-Shot Examples ──────────────────────────────────────────────────────────
@@ -201,6 +207,36 @@ SQL: SELECT COUNT(*) AS count FROM `edw-pilot.neural.beneficiaries` WHERE distri
 
 Q: South Goa active beneficiaries
 SQL: SELECT COUNT(*) AS count FROM `edw-pilot.neural.beneficiaries` WHERE district_id=2 AND status='active';
+
+Q: list all categories with beneficiary counts
+SQL: SELECT c.category_name AS category, COUNT(*) AS count, c.monthly_amount AS monthly_amount_rs FROM `edw-pilot.neural.beneficiaries` b JOIN `edw-pilot.neural.categories` c ON b.category_id = c.category_id WHERE b.status='active' GROUP BY c.category_name, c.monthly_amount ORDER BY count DESC;
+
+Q: which category has the lowest beneficiaries / which category has the least beneficiaries
+SQL: SELECT c.category_name AS category, COUNT(*) AS count FROM `edw-pilot.neural.beneficiaries` b JOIN `edw-pilot.neural.categories` c ON b.category_id = c.category_id WHERE b.status='active' GROUP BY c.category_name ORDER BY count ASC LIMIT 1;
+
+Q: which category has the highest beneficiaries
+SQL: SELECT c.category_name AS category, COUNT(*) AS count FROM `edw-pilot.neural.beneficiaries` b JOIN `edw-pilot.neural.categories` c ON b.category_id = c.category_id WHERE b.status='active' GROUP BY c.category_name ORDER BY count DESC LIMIT 1;
+
+Q: year wise payment comparison / compare payments last 3 years / payment trend by year
+SQL: SELECT EXTRACT(YEAR FROM pd.date) AS year, COUNT(DISTINCT p.beneficiary_key) AS beneficiaries_paid, SUM(p.amount) AS total_amount, COUNT(*) AS payment_count FROM `edw-pilot.neural.payments` p JOIN `edw-pilot.neural.dates` pd ON p.date_id = pd.date_id WHERE p.payment_status = 'paid' GROUP BY year ORDER BY year;
+
+Q: compare payments 2023 vs 2024 vs 2025
+SQL: SELECT EXTRACT(YEAR FROM pd.date) AS year, SUM(p.amount) AS total_paid, COUNT(*) AS payment_count, COUNT(DISTINCT p.beneficiary_key) AS unique_beneficiaries FROM `edw-pilot.neural.payments` p JOIN `edw-pilot.neural.dates` pd ON p.date_id = pd.date_id WHERE p.payment_status = 'paid' AND EXTRACT(YEAR FROM pd.date) IN (2023, 2024, 2025) GROUP BY year ORDER BY year;
+
+Q: year wise registration trend / registrations by year
+SQL: SELECT EXTRACT(YEAR FROM rd.date) AS year, COUNT(*) AS registrations FROM `edw-pilot.neural.beneficiaries` b JOIN `edw-pilot.neural.dates` rd ON b.registration_date_id = rd.date_id GROUP BY year ORDER BY year;
+
+Q: monthly payment trend for 2024 / month wise payments 2024
+SQL: SELECT FORMAT_DATE('%Y-%m', pd.date) AS month, SUM(p.amount) AS total_paid, COUNT(*) AS payment_count FROM `edw-pilot.neural.payments` p JOIN `edw-pilot.neural.dates` pd ON p.date_id = pd.date_id WHERE p.payment_status = 'paid' AND EXTRACT(YEAR FROM pd.date) = 2024 GROUP BY month ORDER BY month;
+
+Q: year wise active beneficiary registrations by category
+SQL: SELECT EXTRACT(YEAR FROM rd.date) AS year, c.category_name AS category, COUNT(*) AS count FROM `edw-pilot.neural.beneficiaries` b JOIN `edw-pilot.neural.dates` rd ON b.registration_date_id = rd.date_id JOIN `edw-pilot.neural.categories` c ON b.category_id = c.category_id WHERE b.status='active' GROUP BY year, category ORDER BY year, count DESC;
+
+Q: last 3 years payment summary / payment comparison across years
+SQL: SELECT EXTRACT(YEAR FROM pd.date) AS year, p.payment_status, COUNT(*) AS count, SUM(p.amount) AS total_amount FROM `edw-pilot.neural.payments` p JOIN `edw-pilot.neural.dates` pd ON p.date_id = pd.date_id WHERE EXTRACT(YEAR FROM pd.date) >= EXTRACT(YEAR FROM DATE_SUB(CURRENT_DATE(), INTERVAL 3 YEAR)) GROUP BY year, p.payment_status ORDER BY year, p.payment_status;
+
+Q: pending payments by year
+SQL: SELECT EXTRACT(YEAR FROM pd.date) AS year, COUNT(*) AS pending_count, SUM(p.amount) AS pending_amount FROM `edw-pilot.neural.payments` p JOIN `edw-pilot.neural.dates` pd ON p.date_id = pd.date_id WHERE p.payment_status = 'pending' GROUP BY year ORDER BY year;
 """
 
 # ── Follow-up signal detection (heuristic, no API call) ───────────────────────
@@ -401,16 +437,23 @@ def build_nl_answer_prompt(
     return f"""You are a DSSY analytics assistant for the Department of Social Welfare, Government of Goa.
 {ctx}The user asked: "{question}"
 Query context: {sql[:200]}
-Database returned {row_count} rows: {json.dumps(results[:15], default=str)}
+Database returned {row_count} rows: {json.dumps(results[:50], default=str)}
 
-Write a clear, insightful 2-4 sentence answer using exact numbers from the data.
+CRITICAL GROUNDING RULES — READ BEFORE ANSWERING:
+- Use ONLY numbers that appear verbatim in the data rows shown above. NEVER invent, estimate, or use numbers from training knowledge.
+- For ranking questions (highest/lowest/most/least/top/bottom): mentally scan ALL provided rows and identify the actual maximum or minimum from the data. Do not guess.
+- If all categories or districts are listed, scan every row to find the true min/max — do not assume any category is highest or lowest without checking.
+- Never write a number that is not present in the data above.
+
+FORMATTING RULES:
 - Lead with the most important finding or direct answer
 - If this is a follow-up (e.g., a sum or combination), reference the prior numbers from conversation history and show how they add up
-- Highlight highest/lowest values or notable patterns when present
-- If multiple categories/districts, mention the top 2-3 by name with their numbers
+- Highlight highest/lowest values: name the actual winner/loser from the data, with their exact count
+- If multiple categories/districts, mention the top 2-3 AND the bottom 1-2 by name with exact numbers
 - Do NOT mention SQL, databases, queries, or technical terms
 - Format large numbers with Indian comma notation (e.g., 1,40,000 not 140000)
 - Use Rs. prefix for monetary amounts
+- Write 2-4 sentences maximum
 {lang_instr}
 
 Answer:"""
