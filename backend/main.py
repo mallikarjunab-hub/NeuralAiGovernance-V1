@@ -19,6 +19,7 @@ from backend.database import (
 from backend.services.cache import check_health as cache_ok
 from backend.services.gemini_service import check_health as gemini_ok
 from backend.services.rag_service import setup, is_ingested, ingest
+from scripts.ingest_web_sources import ingest_web_sources
 from backend.services.context_store import context_store
 from backend.routers.query         import router as query_router
 from backend.routers.analytics     import router as analytics_router
@@ -83,6 +84,17 @@ async def lifespan(app: FastAPI):
                             logger.warning(f"⚠️  KB file not found: {_KB}")
                     else:
                         logger.info("✅ DSSY Knowledge Base already loaded")
+
+                    # ── Ingest web sources (static gov pages, runs once) ──
+                    try:
+                        wc = await ingest_web_sources(db)
+                        if wc:
+                            logger.info(f"✅ Ingested {wc} web sources into RAG")
+                        else:
+                            logger.info("✅ Web sources already loaded")
+                    except Exception as we:
+                        logger.warning(f"⚠️  Web source ingestion failed (non-fatal): {we}")
+
                 except Exception as e:
                     logger.error(f"RAG setup error (non-fatal): {e}")
     else:

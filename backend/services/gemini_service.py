@@ -20,7 +20,7 @@ Architecture:
 import re
 import logging
 
-from backend.services.ai_service import ai_call, embed_text as _embed_text, ai_health
+from backend.services.ai_service import ai_call, embed_text as _embed_text, ai_health, web_grounded_search as _web_search
 from backend.services.prompt_assembler import (
     build_question_resolver_prompt,
     build_intent_prompt,
@@ -139,6 +139,46 @@ async def rag_answer(
         )
     prompt = build_rag_answer_prompt(question, chunks, language, context)
     return await ai_call(prompt, temperature=0.15, max_tokens=512)
+
+
+# ── Web Search Fallback (Agentic RAG) ────────────────────────────────────────
+
+async def web_search_fallback(question: str, language: str = "en") -> dict | None:
+    """
+    Agentic RAG fallback: when local RAG has no answer, use Gemini with
+    Google Search grounding to find the answer from the web.
+
+    Returns:
+        {"answer": str, "sources": list[dict], "grounded": bool} or None on failure.
+    """
+    try:
+        result = await _web_search(question, max_tokens=768)
+        if not result or not result.get("answer"):
+            return None
+
+        # If language is not English, translate the answer
+        if language != "en" and result["answer"]:
+            lang_names = {
+                "hi": "Hindi", "te": "Telugu", "kn": "Kannada",
+                "mr": "Marathi", "kok": "Konkani",
+            }
+            lang_name = lang_names.get(language)
+            if lang_name:
+                translate_prompt = (
+                    f"Translate the following text to {lang_name}. "
+                    f"Keep numbers, proper nouns, and scheme names (like DSSY) in English. "
+                    f"Return only the translation:\n\n{result['answer']}"
+                )
+                try:
+                    translated = await ai_call(translate_prompt, temperature=0.1, max_tokens=768)
+                    result["answer"] = translated.strip()
+                except Exception:
+                    pass  # keep English answer if translation fails
+
+        return result
+    except Exception as e:
+        logger.warning("Web search fallback failed: %s", e)
+        return None
 
 
 # ── Embeddings ────────────────────────────────────────────────────────────────

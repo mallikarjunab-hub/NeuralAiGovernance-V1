@@ -1,8 +1,9 @@
 """
-/api/query — single endpoint, 3-way auto-routing:
+/api/query — single endpoint, 4-way auto-routing (Agentic RAG):
   1. EDGE  : greetings, identity, silly, off-topic → instant canned response (no API cost)
   2. SQL   : data question → Gemini generates PostgreSQL SQL → execute → NL answer + chart
   3. RAG   : scheme knowledge → Neon pgvector hybrid search → Gemini answer from DSSY docs
+  4. WEB   : Gemini web-grounded search fallback when local RAG has no answer
 
 Multi-turn conversation:
   - session_id ties requests together across a browser session
@@ -11,7 +12,7 @@ Multi-turn conversation:
   - Resolved question + raw SQL data is stored per turn so arithmetic follow-ups
     ("sum of active and inactive?") produce correct, coherent answers
 
-Smart fallback: SQL fail → try RAG.  RAG low confidence → try SQL.
+Smart fallback chain: SQL fail → RAG → Web Search.  RAG low confidence → Web Search.
 """
 import time, logging, base64
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form
@@ -23,6 +24,7 @@ from backend.services.gemini_service import (
     resolve_question,
     classify_intent, generate_sql, generate_nl_answer,
     rag_answer, validate_sql, suggest_chart,
+    web_search_fallback,
     BASE, CHAT,
 )
 from backend.config import settings
@@ -57,6 +59,38 @@ async def _try_rag(question: str, language: str, start: float,
             )
     except Exception as e:
         logger.warning(f"RAG fallback failed: {e}")
+        return None
+
+
+async def _try_web_search(question: str, language: str, start: float) -> QueryResponse | None:
+    """Agentic RAG fallback: use Gemini web-grounded search when local RAG has no answer."""
+    try:
+        result = await web_search_fallback(question, language)
+        if not result or not result.get("answer"):
+            return None
+
+        answer = result["answer"]
+        sources = result.get("sources", [])
+
+        # Append source references to the answer
+        if sources:
+            source_lines = "\n\n**Sources:**"
+            for s in sources[:3]:
+                title = s.get("title", "Web source")
+                uri = s.get("uri", "")
+                source_lines += f"\n- [{title}]({uri})" if uri else f"\n- {title}"
+            answer += source_lines
+
+        return QueryResponse(
+            question=question,
+            answer=answer,
+            intent="RAG",
+            row_count=0,
+            execution_time_ms=int((time.time() - start) * 1000),
+            confidence="medium" if result.get("grounded") else "low",
+        )
+    except Exception as e:
+        logger.warning(f"Web search fallback failed: {e}")
         return None
 
 
@@ -98,7 +132,7 @@ async def query(req: QueryRequest):
     intent = await classify_intent(resolved, ctx)
     logger.info(f"Intent: {intent} | Q: {resolved[:80]}")
 
-    # ── Step 4a: RAG Path ─────────────────────────────────────
+    # ── Step 4a: RAG Path (Agentic: local RAG → web search fallback) ─
     if intent == "RAG":
         rag_result = await _try_rag(resolved, req.language, start, ctx)
         if rag_result:
@@ -107,11 +141,22 @@ async def query(req: QueryRequest):
                 rag_result.answer, "RAG",
             )
             return rag_result
+
+        # Local RAG failed → try Gemini web-grounded search
+        web_result = await _try_web_search(resolved, req.language, start)
+        if web_result:
+            logger.info("Agentic RAG: web search answered '%s'", resolved[:60])
+            await context_store.add_turn(
+                req.session_id, req.question, resolved,
+                web_result.answer, "RAG",
+            )
+            return web_result
+
         fallback = (
             "Thank you for your question. I was unable to find specific information "
-            "about this in the DSSY knowledge base. You may contact the Directorate "
-            "of Social Welfare, Government of Goa at https://socialwelfare.goa.gov.in "
-            "for detailed assistance."
+            "about this in the DSSY knowledge base or through web search. You may contact "
+            "the Directorate of Social Welfare, Government of Goa at "
+            "https://socialwelfare.goa.gov.in for detailed assistance."
         )
         await context_store.add_turn(req.session_id, req.question, resolved, fallback, "RAG")
         return QueryResponse(
@@ -141,7 +186,7 @@ async def query(req: QueryRequest):
     try:
         sql, conf = await generate_sql(resolved, ctx)
 
-        # SQL cannot answer → fallback to RAG
+        # SQL cannot answer → fallback to RAG → web search
         if "CANNOT_ANSWER" in sql:
             rag_result = await _try_rag(resolved, req.language, start, ctx)
             if rag_result:
@@ -150,11 +195,22 @@ async def query(req: QueryRequest):
                     rag_result.answer, "RAG",
                 )
                 return rag_result
+
+            # Agentic fallback: web search
+            web_result = await _try_web_search(resolved, req.language, start)
+            if web_result:
+                logger.info("Agentic RAG (SQL→RAG→Web): '%s'", resolved[:60])
+                await context_store.add_turn(
+                    req.session_id, req.question, resolved,
+                    web_result.answer, "RAG",
+                )
+                return web_result
+
             fallback = (
-                "This information is not available in the DSSY beneficiary database "
-                "or scheme knowledge base. You can ask about beneficiary statistics, "
-                "district/taluka distribution, payment status, scheme eligibility, "
-                "or application procedures."
+                "This information is not available in the DSSY beneficiary database, "
+                "scheme knowledge base, or web search. You can ask about beneficiary "
+                "statistics, district/taluka distribution, payment status, scheme "
+                "eligibility, or application procedures."
             )
             await context_store.add_turn(req.session_id, req.question, resolved, fallback, "RAG")
             return QueryResponse(
@@ -180,6 +236,14 @@ async def query(req: QueryRequest):
                     rag_result.answer, "RAG",
                 )
                 return rag_result
+            # Agentic fallback: web search
+            web_result = await _try_web_search(resolved, req.language, start)
+            if web_result:
+                await context_store.add_turn(
+                    req.session_id, req.question, resolved,
+                    web_result.answer, "RAG",
+                )
+                return web_result
             fallback = (
                 "I encountered an issue processing that query. Could you please "
                 "try rephrasing? For example: 'How many active beneficiaries are there?' "
@@ -195,7 +259,7 @@ async def query(req: QueryRequest):
 
         row_count = len(results)
 
-        # SQL returned 0 rows → try RAG before saying "no data"
+        # SQL returned 0 rows → try RAG → web search before saying "no data"
         if row_count == 0:
             rag_result = await _try_rag(resolved, req.language, start, ctx)
             if rag_result:
@@ -204,6 +268,13 @@ async def query(req: QueryRequest):
                     rag_result.answer, "RAG",
                 )
                 return rag_result
+            web_result = await _try_web_search(resolved, req.language, start)
+            if web_result:
+                await context_store.add_turn(
+                    req.session_id, req.question, resolved,
+                    web_result.answer, "RAG",
+                )
+                return web_result
 
         # Generate NL answer — context is passed so the model can reference
         # prior numbers (e.g., "active was 45,231, inactive is 12,453, combined = 57,684")

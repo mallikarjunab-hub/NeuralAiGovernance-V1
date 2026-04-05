@@ -115,6 +115,69 @@ GOA_SURNAMES = ["Naik","Gawas","Sawant","Dessai","Parsekar","Gaonkar","Kamat",
 GOA_PINCODES = ["403001","403002","403101","403102","403201","403202","403401",
                 "403402","403501","403502","403601","403602","403702","403703"]
 
+# Real Goa villages mapped to taluka_id
+# Each tuple: (village_name, taluka_id, pincode)
+VILLAGES = [
+    # Tiswadi (1)
+    ("Panaji", 1, "403001"), ("Taleigao", 1, "403002"), ("Bambolim", 1, "403202"),
+    ("Santa Cruz", 1, "403005"), ("Merces", 1, "403005"), ("Dona Paula", 1, "403004"),
+    ("Ribandar", 1, "403006"), ("Old Goa", 1, "403402"), ("Chorao", 1, "403102"),
+    ("Azossim", 1, "403101"), ("Ella", 1, "403204"), ("Corlim", 1, "403110"),
+    ("St Estevam", 1, "403104"), ("Carambolim", 1, "403002"), ("Agassaim", 1, "403402"),
+    # Bardez (2)
+    ("Mapusa", 2, "403507"), ("Calangute", 2, "403516"), ("Candolim", 2, "403515"),
+    ("Anjuna", 2, "403509"), ("Siolim", 2, "403517"), ("Assagao", 2, "403507"),
+    ("Saligao", 2, "403511"), ("Porvorim", 2, "403521"), ("Bastora", 2, "403507"),
+    ("Aldona", 2, "403508"), ("Pomburpa", 2, "403521"), ("Guirim", 2, "403507"),
+    ("Sangolda", 2, "403511"), ("Pilerne", 2, "403511"), ("Penha de Franca", 2, "403512"),
+    # Pernem (3)
+    ("Pernem", 3, "403512"), ("Arambol", 3, "403524"), ("Morjim", 3, "403512"),
+    ("Mandrem", 3, "403527"), ("Terekhol", 3, "403524"), ("Virnoda", 3, "403512"),
+    ("Dhargal", 3, "403513"), ("Colvale", 3, "403513"), ("Tuem", 3, "403512"),
+    # Bicholim (4)
+    ("Bicholim", 4, "403504"), ("Sanquelim", 4, "403505"), ("Mulgao", 4, "403504"),
+    ("Navelim", 4, "403504"), ("Mayem", 4, "403504"), ("Latambarcem", 4, "403505"),
+    ("Amona", 4, "403107"), ("Pale", 4, "403504"), ("Piligao", 4, "403504"),
+    # Satari (5)
+    ("Valpoi", 5, "403506"), ("Keri", 5, "403506"), ("Honda", 5, "403506"),
+    ("Sanvordem", 5, "403506"), ("Codal", 5, "403506"), ("Thane", 5, "403506"),
+    # Ponda (6)
+    ("Ponda", 6, "403401"), ("Farmagudi", 6, "403401"), ("Bandora", 6, "403401"),
+    ("Marcela", 6, "403404"), ("Shiroda", 6, "403103"), ("Priol", 6, "403404"),
+    ("Curti", 6, "403401"), ("Savoi Verem", 6, "403401"), ("Borim", 6, "403401"),
+    ("Mardol", 6, "403404"), ("Queula", 6, "403401"), ("Khandepar", 6, "403401"),
+    # Salcete (7)
+    ("Margao", 7, "403601"), ("Colva", 7, "403708"), ("Benaulim", 7, "403716"),
+    ("Varca", 7, "403721"), ("Raia", 7, "403720"), ("Loutolim", 7, "403718"),
+    ("Curtorim", 7, "403709"), ("Rachol", 7, "403720"), ("Nuvem", 7, "403604"),
+    ("Navelim", 7, "403707"), ("Chinchinim", 7, "403715"), ("Assolna", 7, "403702"),
+    ("Velim", 7, "403723"), ("Cuncolim", 7, "403703"), ("Orlim", 7, "403724"),
+    # Mormugao (8)
+    ("Vasco da Gama", 8, "403802"), ("Dabolim", 8, "403801"), ("Chicalim", 8, "403711"),
+    ("Cortalim", 8, "403710"), ("Sancoale", 8, "403710"), ("Bogmalo", 8, "403806"),
+    ("Cansaulim", 8, "403712"), ("Arossim", 8, "403712"), ("Mormugao", 8, "403803"),
+    # Quepem (9)
+    ("Quepem", 9, "403705"), ("Curchorem", 9, "403706"), ("Balli", 9, "403706"),
+    ("Xeldem", 9, "403705"), ("Ambaulim", 9, "403705"), ("Pirla", 9, "403705"),
+    ("Barcem", 9, "403705"), ("Avedem", 9, "403705"), ("Assonora", 9, "403705"),
+    # Sanguem (10)
+    ("Sanguem", 10, "403704"), ("Rivona", 10, "403704"), ("Neturli", 10, "403704"),
+    ("Curdi", 10, "403704"), ("Cotigao", 10, "403704"), ("Uguem", 10, "403704"),
+    ("Netravali", 10, "403704"), ("Verlem", 10, "403704"),
+    # Canacona (11)
+    ("Chaudi", 11, "403702"), ("Palolem", 11, "403702"), ("Agonda", 11, "403702"),
+    ("Poinguinim", 11, "403702"), ("Cola", 11, "403702"), ("Gaondongrim", 11, "403702"),
+    ("Loliem", 11, "403728"), ("Mashem", 11, "403702"),
+    # Dharbandora (12)
+    ("Dharbandora", 12, "403406"), ("Mollem", 12, "403410"), ("Collem", 12, "403410"),
+    ("Dudhsagar", 12, "403410"), ("Kulem", 12, "403410"), ("Sancordem", 12, "403406"),
+]
+
+# Build taluka→village lookup for fast assignment
+_VILLAGES_BY_TALUKA: dict[int, list[tuple]] = {}
+for _v in VILLAGES:
+    _VILLAGES_BY_TALUKA.setdefault(_v[1], []).append(_v)
+
 MONTH_NAMES = {
     1:"January",2:"February",3:"March",4:"April",5:"May",6:"June",
     7:"July",8:"August",9:"September",10:"October",11:"November",12:"December",
@@ -217,6 +280,11 @@ def gen_beneficiaries() -> list[dict]:
                 reg_date = date(2002, random.randint(1, 12), random.randint(1, 28))
 
             taluka = random.choices(TALUKAS, weights=TALUKA_WEIGHTS, k=1)[0]
+            # Pick a village from this taluka
+            taluka_villages = _VILLAGES_BY_TALUKA.get(taluka[0], [])
+            village = random.choice(taluka_villages) if taluka_villages else None
+            village_idx = VILLAGES.index(village) + 1 if village else None
+
             status = statuses[i]
             status_changed = None
             if status != "Active":
@@ -233,7 +301,8 @@ def gen_beneficiaries() -> list[dict]:
                 "age":                  date.today().year - dob.year,
                 "district_id":          taluka[1],
                 "taluka_id":            taluka[0],
-                "pincode":              random.choice(GOA_PINCODES),
+                "village_id":           village_idx,
+                "pincode":              village[2] if village else random.choice(GOA_PINCODES),
                 "category_id":          cat_id,
                 "current_monthly_amount": float(monthly_amt),
                 "bank_id":              random.randint(1, 10),
@@ -583,6 +652,7 @@ async def truncate(conn: asyncpg.Connection):
         "beneficiary_status_history",
         "payment_summary",
         "beneficiaries",
+        "villages",
     ]
     for t in order:
         await conn.execute(f"TRUNCATE TABLE {t} RESTART IDENTITY CASCADE")
@@ -660,63 +730,95 @@ async def seed(dsn: str, batch_size: int = 500, dry_run: bool = False):
         log.info("DRY RUN — no database writes.")
         return
 
-    log.info("Connecting to Neon …")
-    conn = await asyncpg.connect(dsn)
-    log.info("  ✓ Connected")
+    # ── Helper: fresh connection per table to avoid Neon free-tier timeouts ──
+    async def _connect():
+        c = await asyncpg.connect(dsn)
+        log.info("  ✓ Connected")
+        return c
 
-    # Helper: each batch auto-commits (no wrapping transaction) to avoid
-    # Neon free-tier connection timeouts on long-running single transactions.
     async def _insert_table(label, table, rows, col_filter=None):
+        """Insert in chunks of 10k rows, reconnecting between chunks to avoid Neon timeouts."""
         log.info("Inserting %s …", label)
         data = rows
         if col_filter:
             data = [{k: v for k, v in r.items() if k in col_filter} for r in rows]
-        await bulk_insert(conn, table, data, batch_size)
+        CHUNK = 10_000  # reconnect every 10k rows — safe for Neon free tier
+        disable_triggers = table in ("beneficiaries", "payments")
+        for start in range(0, len(data), CHUNK):
+            chunk = data[start : start + CHUNK]
+            for attempt in range(3):
+                c = await _connect()
+                try:
+                    if disable_triggers:
+                        await c.execute(f"ALTER TABLE {table} DISABLE TRIGGER USER")
+                    await bulk_insert(c, table, chunk, batch_size)
+                    if disable_triggers:
+                        await c.execute(f"ALTER TABLE {table} ENABLE TRIGGER USER")
+                    break  # success
+                except Exception as e:
+                    log.warning("    Chunk failed (attempt %d): %s", attempt + 1, str(e)[:80])
+                    if attempt == 2:
+                        raise
+                finally:
+                    try:
+                        await c.close()
+                    except Exception:
+                        pass
+            done = min(start + CHUNK, len(data))
+            if done % 50_000 == 0 or done == len(data):
+                log.info("    %s: %d / %d rows", table, done, len(data))
 
+    # ── Truncate ──
+    log.info("Connecting to Neon …")
+    conn = await _connect()
+    async with conn.transaction():
+        await truncate(conn)
+    # Insert villages
+    log.info("Inserting villages …")
+    village_rows = []
+    for i, (vname, tid, vpin) in enumerate(VILLAGES, 1):
+        village_rows.append({
+            "village_id":   i,
+            "village_code": f"V{str(i).zfill(4)}",
+            "village_name": vname,
+            "taluka_id":    tid,
+            "pincode":      vpin,
+            "is_active":    True,
+        })
+    await bulk_insert(conn, "villages", village_rows, batch_size)
+    log.info("  ✓ %d villages inserted", len(village_rows))
+    await conn.close()
+
+    # ── Insert each table with a fresh connection ──
+    await _insert_table("beneficiaries", "beneficiaries", bens)
+
+    await _insert_table("scheme_enrollments", "scheme_enrollments", enrollments,
+        ("enrollment_id","beneficiary_id","category_id",
+         "enrollment_date","end_date","is_current","created_at"))
+
+    await _insert_table("beneficiary_status_history", "beneficiary_status_history", history,
+        ("id","beneficiary_id","old_status","new_status","changed_at","reason"))
+
+    await _insert_table("payment_batches", "payment_batches", batches)
+
+    await _insert_table("payments", "payments", payments,
+        ("payment_id","beneficiary_id","payment_date",
+         "amount","status","payment_method","transaction_id","created_at"))
+
+    await _insert_table("payment_summary", "payment_summary", summary,
+        ("summary_id","payment_year","payment_month","fiscal_year",
+         "district_id","taluka_id","category_id",
+         "total_beneficiaries","paid_count","pending_count",
+         "failed_count","total_base_amount","total_net_amount",
+         "male_count","female_count","last_updated_at"))
+
+    await _insert_table("life_certificates", "life_certificates", certs)
+
+    # ── Refresh materialized views ──
+    log.info("")
+    log.info("Refreshing materialized views …")
+    conn = await _connect()
     try:
-        async with conn.transaction():
-            await truncate(conn)
-
-        # ── Disable triggers during bulk insert ──────────────────
-        # The audit_beneficiaries trigger stores to_jsonb(NEW) for every INSERT
-        # which doubles storage. The status_history trigger is redundant since
-        # we insert history rows explicitly. Disable both to fit 300k in 512 MB.
-        log.info("Disabling user triggers for bulk insert …")
-        await conn.execute("ALTER TABLE beneficiaries DISABLE TRIGGER USER")
-        await conn.execute("ALTER TABLE payments DISABLE TRIGGER USER")
-
-        await _insert_table("beneficiaries", "beneficiaries", bens)
-
-        await _insert_table("scheme_enrollments", "scheme_enrollments", enrollments,
-            ("enrollment_id","beneficiary_id","category_id",
-             "enrollment_date","end_date","is_current","created_at"))
-
-        await _insert_table("beneficiary_status_history", "beneficiary_status_history", history,
-            ("id","beneficiary_id","old_status","new_status","changed_at","reason"))
-
-        await _insert_table("payment_batches", "payment_batches", batches)
-
-        await _insert_table("payments", "payments", payments,
-            ("payment_id","beneficiary_id","payment_date",
-             "amount","status","payment_method","transaction_id","created_at"))
-
-        await _insert_table("payment_summary", "payment_summary", summary,
-            ("summary_id","payment_year","payment_month","fiscal_year",
-             "district_id","taluka_id","category_id",
-             "total_beneficiaries","paid_count","pending_count",
-             "failed_count","total_base_amount","total_net_amount",
-             "male_count","female_count","last_updated_at"))
-
-        await _insert_table("life_certificates", "life_certificates", certs)
-
-        # ── Re-enable triggers ───────────────────────────────────
-        log.info("Re-enabling user triggers …")
-        await conn.execute("ALTER TABLE beneficiaries ENABLE TRIGGER USER")
-        await conn.execute("ALTER TABLE payments ENABLE TRIGGER USER")
-        log.info("  ✓ Triggers re-enabled")
-
-        log.info("")
-        log.info("Refreshing materialized views …")
         for mv in (
             "payment_summary_monthly",
             "beneficiary_summary_current",
@@ -725,21 +827,13 @@ async def seed(dsn: str, batch_size: int = 500, dry_run: bool = False):
             try:
                 await conn.execute(f"REFRESH MATERIALIZED VIEW CONCURRENTLY {mv}")
                 log.info("  ✓ %s refreshed", mv)
-            except Exception as e:
-                # CONCURRENTLY needs a unique index; fall back to non-concurrent
+            except Exception:
                 try:
                     await conn.execute(f"REFRESH MATERIALIZED VIEW {mv}")
                     log.info("  ✓ %s refreshed (non-concurrent)", mv)
                 except Exception as e2:
                     log.warning("  ⚠ %s skipped: %s", mv, e2)
-
     finally:
-        # Safety: always re-enable triggers even on failure
-        try:
-            await conn.execute("ALTER TABLE beneficiaries ENABLE TRIGGER ALL")
-            await conn.execute("ALTER TABLE payments ENABLE TRIGGER ALL")
-        except Exception:
-            pass
         await conn.close()
 
     log.info("")

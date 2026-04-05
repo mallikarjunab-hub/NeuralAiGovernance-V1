@@ -420,6 +420,126 @@ async def ai_health() -> dict:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# WEB-GROUNDED SEARCH (Gemini + Google Search tool)
+# ─────────────────────────────────────────────────────────────────────────────
+
+async def web_grounded_search(query: str, max_tokens: int = 1024) -> dict:
+    """
+    Use Gemini with Google Search grounding to answer questions not in local RAG.
+
+    Returns:
+        {
+            "answer": str,           # Gemini's grounded answer text
+            "sources": list[dict],   # [{title, uri}] from grounding metadata
+            "grounded": bool,        # True if web search was used
+        }
+    Raises AIServiceUnavailable on persistent failure.
+    """
+    if not _cb.allow_request():
+        raise AIServiceUnavailable("Gemini AI unavailable (circuit breaker OPEN)")
+
+    url = f"{_BASE}/models/gemini-2.5-flash-lite:generateContent?key={settings.GEMINI_API_KEY}"
+    payload = {
+        "contents": [{"parts": [{"text": (
+            f"You are a knowledgeable assistant for the DSSY (Dayanand Social Security Scheme) "
+            f"of the Government of Goa, India. Answer the following question accurately using "
+            f"web search results. Provide specific facts, numbers, and details. "
+            f"If the question is about DSSY, social welfare schemes in Goa, or related government "
+            f"policies, provide a comprehensive answer. Keep the answer concise (2-4 paragraphs).\n\n"
+            f"Question: {query}"
+        )}]}],
+        "tools": [{"google_search": {}}],
+        "generationConfig": {
+            "temperature": 0.2,
+            "maxOutputTokens": max_tokens,
+        },
+    }
+
+    last_exc: Optional[Exception] = None
+    for attempt in range(1, _MAX_RETRIES + 1):
+        t0 = time.monotonic()
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                resp = await client.post(url, json=payload)
+
+            latency_ms = int((time.monotonic() - t0) * 1000)
+
+            if resp.status_code in _RETRY_STATUS_CODES:
+                last_exc = httpx.HTTPStatusError(
+                    f"HTTP {resp.status_code}", request=resp.request, response=resp
+                )
+                await _backoff(attempt)
+                continue
+
+            resp.raise_for_status()
+            data = resp.json()
+
+            # Extract answer text
+            answer = ""
+            try:
+                parts = data["candidates"][0]["content"]["parts"]
+                answer = " ".join(p.get("text", "") for p in parts).strip()
+            except (KeyError, IndexError, TypeError):
+                pass
+
+            if not answer:
+                raise AIEmptyResponse("Gemini web search returned empty text")
+
+            # Extract grounding sources from metadata
+            sources = []
+            try:
+                grounding = data["candidates"][0].get("groundingMetadata", {})
+                chunks = grounding.get("groundingChunks", [])
+                for chunk in chunks:
+                    web = chunk.get("web", {})
+                    if web.get("uri"):
+                        sources.append({
+                            "title": web.get("title", ""),
+                            "uri": web["uri"],
+                        })
+                # Deduplicate by URI
+                seen = set()
+                unique_sources = []
+                for s in sources:
+                    if s["uri"] not in seen:
+                        seen.add(s["uri"])
+                        unique_sources.append(s)
+                sources = unique_sources[:5]
+            except (KeyError, TypeError):
+                pass
+
+            _cb.record_success()
+            log.info(
+                "[ai_service] web_search OK latency=%dms sources=%d chars=%d",
+                latency_ms, len(sources), len(answer),
+            )
+            return {
+                "answer": answer,
+                "sources": sources,
+                "grounded": len(sources) > 0,
+            }
+
+        except (httpx.TimeoutException, httpx.ConnectError) as e:
+            log.warning("[ai_service] web_search attempt %d/%d: %s", attempt, _MAX_RETRIES, e)
+            last_exc = e
+            _cb.record_failure()
+            await _backoff(attempt)
+
+        except AIEmptyResponse:
+            raise
+
+        except Exception as e:
+            log.warning("[ai_service] web_search attempt %d/%d: %s", attempt, _MAX_RETRIES, e)
+            last_exc = e
+            _cb.record_failure()
+            await _backoff(attempt)
+
+    raise AIServiceUnavailable(
+        f"Web grounded search failed after {_MAX_RETRIES} retries"
+    ) from last_exc
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # CIRCUIT BREAKER STATUS (for /health endpoint)
 # ─────────────────────────────────────────────────────────────────────────────
 

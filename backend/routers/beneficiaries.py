@@ -66,6 +66,7 @@ async def list_beneficiaries(
                 b.age,
                 b.date_of_birth,
                 b.status,
+                b.registration_date,
                 d.district_name,
                 t.taluka_name,
                 v.village_name,
