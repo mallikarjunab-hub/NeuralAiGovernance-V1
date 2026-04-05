@@ -1,6 +1,6 @@
 """
 Neural AI Governance v3.0
-Dual Database: BigQuery (data) + Neon pgvector (RAG)
+Database: Neon PostgreSQL (data + pgvector RAG)
 3-way routing: Edge → SQL → RAG
 """
 import logging, os, time
@@ -13,7 +13,6 @@ from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from backend.config import settings
 from backend.database import (
-    check_bq_health, wake_bigquery,
     check_neon_health, wake_neon,
     neon_session_context, dispose_all,
 )
@@ -41,20 +40,16 @@ async def lifespan(app: FastAPI):
     logger.info("=" * 60)
     logger.info("  Neural AI Governance v3.0")
     logger.info(f"  Environment : {settings.ENVIRONMENT}")
-    logger.info(f"  Data DB     : BigQuery")
+    logger.info(f"  Data DB     : Neon PostgreSQL")
     logger.info(f"  RAG DB      : Neon PostgreSQL + pgvector")
     logger.info(f"  AI Engine   : Gemini (gemini-2.5-flash-lite + gemini-embedding-001)")
     logger.info("=" * 60)
 
-    # ── BigQuery health check ─────────────────────────────────
-    bq_ok = await wake_bigquery(retries=3, delay=2.0)
-    logger.info(f"{'✅' if bq_ok else '⚠️ '} BigQuery {'connected' if bq_ok else 'FAILED — check DATABASE_URL'}")
-
-    # ── Neon health check + RAG setup ─────────────────────────
+    # ── Neon PostgreSQL health check + RAG setup ────────────────
     neon_ok = False
     if settings.NEON_DATABASE_URL:
         neon_ok = await wake_neon(retries=5, delay=3.0)   # 15s window for cold start
-        logger.info(f"{'✅' if neon_ok else '⚠️ '} Neon pgvector {'connected' if neon_ok else 'FAILED — check NEON_DATABASE_URL'}")
+        logger.info(f"{'✅' if neon_ok else '⚠️ '} Neon PostgreSQL {'connected' if neon_ok else 'FAILED — check NEON_DATABASE_URL'}")
 
         if neon_ok:
             async with neon_session_context() as db:
@@ -98,7 +93,7 @@ async def lifespan(app: FastAPI):
     logger.info(f"{'✅' if gok else '⚠️ '} Gemini AI {'ready' if gok else 'NOT responding — check GEMINI_API_KEY'}")
 
     logger.info("-" * 60)
-    logger.info(f"  Status: BigQuery={'OK' if bq_ok else 'DOWN'} | Neon={'OK' if neon_ok else 'DOWN'} | Gemini={'OK' if gok else 'DOWN'}")
+    logger.info(f"  Status: Neon={'OK' if neon_ok else 'DOWN'} | Gemini={'OK' if gok else 'DOWN'}")
     logger.info("=" * 60)
 
     yield
@@ -141,13 +136,11 @@ if os.path.isdir(_FE):
 
 @app.get("/health")
 async def health():
-    bq = await check_bq_health()
     neon = await check_neon_health()
     gm = await gemini_ok()
     return {
-        "status": "healthy" if (bq and gm) else "degraded",
-        "bigquery": "connected" if bq else "error",
-        "neon_pgvector": "connected" if neon else "error",
+        "status": "healthy" if (neon and gm) else "degraded",
+        "neon": "connected" if neon else "error",
         "gemini": "ok" if gm else "error",
         "cache": "ok" if await cache_ok() else "unavailable",
         "version": settings.APP_VERSION,

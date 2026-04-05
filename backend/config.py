@@ -8,17 +8,9 @@ class Settings(BaseSettings):
     DEBUG:       bool = False
     LOG_LEVEL:   str  = "INFO"
 
-    # ── BigQuery (data queries) ────────────────────────────────
-    DATABASE_URL:       str = ""          # bigquery://project/dataset
-    DB_POOL_SIZE:       int = 5
-    DB_MAX_OVERFLOW:    int = 10
-    DB_POOL_TIMEOUT:    int = 30
-    DB_POOL_RECYCLE:    int = 300
-    DB_COMMAND_TIMEOUT: int = 30
+    # ── Neon PostgreSQL (data queries + RAG) ──────────────────
+    NEON_DATABASE_URL:  str = ""          # postgresql://...neon.tech/...
     MAX_SQL_ROWS:       int = 1000
-
-    # ── Neon PostgreSQL (RAG only) ─────────────────────────────
-    NEON_DATABASE_URL:  str = ""          # postgresql+asyncpg://...neon.tech/...
     NEON_POOL_SIZE:     int = 2
     NEON_MAX_OVERFLOW:  int = 2
 

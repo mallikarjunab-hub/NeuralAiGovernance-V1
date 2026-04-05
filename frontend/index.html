@@ -203,6 +203,27 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
 .dfb-sep{color:var(--text4);font-size:13px;font-weight:500}
 .dfb-right{font-size:11.5px;color:var(--text3);font-weight:500;display:flex;align-items:center;gap:7px;flex-shrink:0}
 .dfb-period-pill{background:var(--b5);border:1px solid var(--border2);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;color:var(--b2)}
+/* ── NLP Search Bar (Dynamic Dashboard) ─────────────────────── */
+.nlp-bar{display:flex;align-items:center;gap:10px;background:var(--white);border:1.5px solid var(--b2);border-radius:var(--r);padding:10px 16px;margin-bottom:16px;box-shadow:0 0 0 3px rgba(0,71,173,.07)}
+.nlp-bar-ico{color:var(--b2);flex-shrink:0;opacity:.7}
+.nlp-inp{flex:1;border:none;outline:none;font-family:'DM Sans',sans-serif;font-size:13.5px;color:var(--text);background:transparent;min-width:0}
+.nlp-inp::placeholder{color:var(--text4)}
+.nlp-btn{padding:7px 20px;background:var(--b1);color:#fff;border:none;border-radius:7px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.nlp-btn:hover{background:var(--b2)}
+.nlp-btn:disabled{opacity:.5;cursor:not-allowed}
+.nlp-status{font-size:11.5px;color:var(--text3);margin-bottom:12px;min-height:18px;display:flex;align-items:center;gap:8px}
+.nlp-ans-card{background:var(--b5);border:1px solid var(--border2);border-radius:10px;padding:14px 18px;margin-bottom:16px;font-size:13.5px;color:var(--text);line-height:1.65;display:none}
+.nlp-ans-card.show{display:block}
+.nlp-ans-hd{font-size:10px;font-weight:700;color:var(--b2);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px}
+/* ── Dynamic chart grid ─────────────────────────────────────── */
+.dyn-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.dyn-chart-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:20px;box-shadow:var(--sh);position:relative;overflow:hidden}
+.dyn-chart-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--b1),var(--b3))}
+.dyn-empty{background:var(--white);border:1.5px dashed var(--border);border-radius:var(--r);padding:48px;text-align:center;color:var(--text4);font-size:13px;line-height:1.7}
+.dyn-empty strong{display:block;color:var(--text3);font-size:15px;margin-bottom:8px;font-family:'DM Serif Display',serif}
+.nlp-chip-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.nlp-chip{padding:6px 14px;background:var(--b5);border:1px solid var(--border2);border-radius:20px;font-size:12px;color:var(--b2);cursor:pointer;font-family:inherit;font-weight:600;transition:all .15s;white-space:nowrap}
+.nlp-chip:hover{background:var(--b4);border-color:var(--b2)}
 </style>
 </head>
 <body>
@@ -228,6 +249,7 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
 
 <nav class="nav">
   <button class="nb on" onclick="go('dash',this)">Dashboard</button>
+  <button class="nb" onclick="go('dyn',this)">Dynamic Dashboard</button>
   <button class="nb" onclick="go('chat',this)">AI Query Interface</button>
   <button class="nb" onclick="go('bens',this)">Beneficiary Records</button>
 </nav>
@@ -410,6 +432,62 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
     </div><!-- end dash-pbi -->
 
   </div><!-- end v-dash -->
+
+  <!-- DYNAMIC DASHBOARD -->
+  <div class="view" id="v-dyn">
+    <div class="dash-hdr">
+      <div class="dash-title">
+        🔍 Dynamic Analytics Dashboard
+        <span class="live-badge"><span class="live-dot"></span>NLP-Driven</span>
+      </div>
+      <div class="dash-meta">
+        <span class="upd-lbl" id="dynUpd">Ask a question to explore data</span>
+      </div>
+    </div>
+
+    <!-- NLP search bar -->
+    <div class="nlp-bar">
+      <span class="nlp-bar-ico">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </span>
+      <input class="nlp-inp" id="nlpInp" type="text" placeholder="e.g. Show me category-wise breakdown, or compare district counts, or payment trend last 3 years…" autocomplete="off"/>
+      <button class="nlp-btn" id="nlpBtn" onclick="nlpQuery()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        Analyse
+      </button>
+    </div>
+
+    <!-- Quick suggestion chips -->
+    <div class="nlp-chip-row">
+      <button class="nlp-chip" onclick="nlpSet('Category-wise beneficiary breakdown')">Category breakdown</button>
+      <button class="nlp-chip" onclick="nlpSet('District-wise active beneficiaries')">District comparison</button>
+      <button class="nlp-chip" onclick="nlpSet('Taluka-wise active beneficiaries in North Goa')">North Goa talukas</button>
+      <button class="nlp-chip" onclick="nlpSet('Age group distribution of active beneficiaries')">Age distribution</button>
+      <button class="nlp-chip" onclick="nlpSet('Gender breakdown of active beneficiaries')">Gender split</button>
+      <button class="nlp-chip" onclick="nlpSet('Compare payments last 3 years')">Payment trend 3yr</button>
+      <button class="nlp-chip" onclick="nlpSet('Monthly payment trend for 2024')">Monthly payments 2024</button>
+      <button class="nlp-chip" onclick="nlpSet('Which category has the lowest number of beneficiaries')">Lowest category</button>
+      <button class="nlp-chip" onclick="nlpSet('Inactive beneficiaries by category')">Inactive by category</button>
+      <button class="nlp-chip" onclick="nlpSet('Year wise registration trend')">Registration trend</button>
+    </div>
+
+    <!-- Status + answer -->
+    <div class="nlp-status" id="nlpStatus"></div>
+    <div class="nlp-ans-card" id="nlpAnsCard">
+      <div class="nlp-ans-hd">AI Insight</div>
+      <div id="nlpAnsText"></div>
+    </div>
+
+    <!-- Dynamic chart area -->
+    <div id="dynArea">
+      <div class="dyn-empty">
+        <strong>Ask anything about DSSY data</strong>
+        Type a question or click a chip above — the chart will update automatically based on the data returned.
+        <br><br>
+        Examples: "category-wise breakdown", "compare North vs South Goa", "payment trend last 3 years", "which taluka has most senior citizens"
+      </div>
+    </div>
+  </div><!-- end v-dyn -->
 
   <!-- CHAT -->
   <div class="view" id="v-chat">
@@ -953,6 +1031,147 @@ function go(v, tab) {
   if (tab) tab.classList.add('on');
   if (v === 'dash' && !_dashLoaded) { _dashLoaded = true; loadDash(); }
   if (v === 'bens' && bTotal === 0) fetchB(1);
+}
+
+// ── DYNAMIC DASHBOARD ─────────────────────────────────────────────────────────
+let _dynChartIdx = 0;
+const _dynCI = {};
+
+document.addEventListener('DOMContentLoaded', () => {
+  const ni = document.getElementById('nlpInp');
+  if (ni) ni.addEventListener('keydown', e => { if (e.key === 'Enter') nlpQuery(); });
+});
+
+function nlpSet(text) {
+  const inp = document.getElementById('nlpInp');
+  if (inp) { inp.value = text; inp.focus(); }
+  nlpQuery();
+}
+
+async function nlpQuery() {
+  const inp = document.getElementById('nlpInp');
+  const q = inp ? inp.value.trim() : '';
+  if (!q) return;
+
+  const btn = document.getElementById('nlpBtn');
+  const statusEl = document.getElementById('nlpStatus');
+  const ansCard = document.getElementById('nlpAnsCard');
+  const ansText = document.getElementById('nlpAnsText');
+  const dynArea = document.getElementById('dynArea');
+
+  btn.disabled = true;
+  statusEl.innerHTML = '<span class="tdot"></span><span class="tdot"></span><span class="tdot"></span>&nbsp; Analysing…';
+  ansCard.classList.remove('show');
+  document.getElementById('dynUpd').textContent = 'Fetching data…';
+
+  try {
+    const res = await fetch(`${BASE}/api/query`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: q, language: 'en', include_sql: false, session_id: SESSION_ID })
+    });
+    const d = await res.json();
+
+    if (d.answer) {
+      ansText.innerHTML = esc(d.answer);
+      ansCard.classList.add('show');
+    }
+
+    statusEl.textContent = d.row_count
+      ? `${d.row_count} result${d.row_count === 1 ? '' : 's'} · ${d.execution_time_ms}ms · ${d.intent}`
+      : (d.intent === 'RAG' ? 'Scheme knowledge answer' : 'No tabular data returned');
+
+    if (d.data && d.data.length >= 1) {
+      renderDynCharts(q, d.data, d.chart_type);
+    } else if (d.intent !== 'RAG') {
+      dynArea.innerHTML = `<div class="dyn-empty"><strong>No chart data</strong>The query returned a text answer only. Check the AI Insight above.</div>`;
+    }
+    document.getElementById('dynUpd').textContent = 'Updated ' + new Date().toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'});
+  } catch (e) {
+    statusEl.textContent = 'Error: ' + e.message;
+    document.getElementById('dynUpd').textContent = 'Error';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function renderDynCharts(question, data, hintType) {
+  const dynArea = document.getElementById('dynArea');
+  if (!dynArea) return;
+
+  // Destroy old charts
+  Object.keys(_dynCI).forEach(k => { try { _dynCI[k].destroy(); } catch(e){} delete _dynCI[k]; });
+  _dynChartIdx++;
+
+  const cols = Object.keys(data[0]);
+  const numCols = cols.filter(c => data.every(r => r[c] !== null && r[c] !== '' && !isNaN(parseFloat(r[c]))));
+  const lblCols = cols.filter(c => !numCols.includes(c));
+
+  if (!numCols.length) {
+    dynArea.innerHTML = buildDynTable(data, true);
+    return;
+  }
+
+  const lc = lblCols[0] || cols[0];
+  const chartsToRender = numCols.slice(0, 3);
+
+  const isTime = /month|period|year|date|trend/i.test(lc) || /year|month|trend/i.test(question);
+  const isFew = data.length <= 6;
+  const defType = hintType || (isTime ? 'line' : isFew ? 'doughnut' : 'bar');
+
+  let html = `<div class="dyn-grid">`;
+  chartsToRender.forEach((vc, i) => {
+    const cid = `dync_${_dynChartIdx}_${i}`;
+    html += `<div class="dyn-chart-card">
+      <div class="chd"><div class="chd-left"><span class="chd-dot"></span>${vc.replace(/_/g,' ')} by ${lc.replace(/_/g,' ')}</div>
+        <div class="qctog">
+          <button class="ctb${defType==='bar'?' on':''}" onclick="swDyn('${cid}','bar',this)">Bar</button>
+          <button class="ctb${defType==='doughnut'?' on':''}" onclick="swDyn('${cid}','doughnut',this)">Donut</button>
+          <button class="ctb${defType==='line'?' on':''}" onclick="swDyn('${cid}','line',this)">Line</button>
+        </div>
+      </div>
+      <div class="chw"><canvas id="${cid}"></canvas></div>
+    </div>`;
+  });
+
+  if (chartsToRender.length === 1 && data.length <= 25) {
+    html += `<div class="dyn-chart-card">${buildDynTable(data, false)}</div>`;
+  }
+  html += `</div>`;
+  if (chartsToRender.length > 1 || data.length > 25) {
+    html += buildDynTable(data, true);
+  }
+
+  dynArea.innerHTML = html;
+
+  chartsToRender.forEach((vc, i) => {
+    const cid = `dync_${_dynChartIdx}_${i}`;
+    const labels = data.map(r => String(r[lc]).length > 18 ? String(r[lc]).slice(0,16)+'…' : String(r[lc]));
+    const values = data.map(r => parseFloat(r[vc]) || 0);
+    window._QD = window._QD || {};
+    window._QD[cid] = { labels, values };
+    rQC(cid, defType);
+    _dynCI[cid] = CI[cid];
+  });
+}
+
+function buildDynTable(data, fullWidth) {
+  if (!data || !data.length) return '';
+  const cols = Object.keys(data[0]);
+  const style = fullWidth ? 'margin-top:16px' : '';
+  return `<div class="rtwrap" style="${style}">
+    <table class="rtbl">
+      <thead><tr>${cols.map(c=>`<th>${esc(c.replace(/_/g,' '))}</th>`).join('')}</tr></thead>
+      <tbody>${data.map(r=>`<tr>${cols.map(c=>`<td>${esc(String(r[c]??'—'))}</td>`).join('')}</tr>`).join('')}</tbody>
+    </table>
+  </div>`;
+}
+
+function swDyn(cid, type, btn) {
+  btn.closest('.qctog').querySelectorAll('.ctb').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  rQC(cid, type);
+  _dynCI[cid] = CI[cid];
 }
 
 // ── UTILS ─────────────────────────────────────────────────────────────────────

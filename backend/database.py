@@ -1,7 +1,6 @@
 """
-Dual Database Layer
-  BigQuery  → beneficiary data, analytics, SQL queries
-  Neon PG   → pgvector RAG chunks only
+Database Layer — Neon PostgreSQL (single unified database)
+  Beneficiary queries, analytics, RAG pgvector, conversation context — all on Neon.
 """
 import logging, asyncio
 from typing import AsyncGenerator
@@ -11,14 +10,28 @@ from backend.config import settings
 
 logger = logging.getLogger(__name__)
 
+
 # ═══════════════════════════════════════════════════════════════
-# BigQuery Connection (data queries)
+# Shared helpers
 # ═══════════════════════════════════════════════════════════════
 
-def _fix_bq(url: str) -> str:
+def _fix_neon(url: str) -> str:
     if not url:
-        raise ValueError("DATABASE_URL not set — need BigQuery connection string")
-    return url.strip().strip('"').strip("'")
+        raise ValueError("NEON_DATABASE_URL not set")
+    url = url.strip().strip('"').strip("'")
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql://", 1)
+    if url.startswith("postgresql+asyncpg://"):
+        url = url.replace("postgresql+asyncpg://", "postgresql://", 1)
+    if "?" in url:
+        base, params = url.split("?", 1)
+        keep = [p for p in params.split("&") if not any(k in p for k in ["channel_binding", "connect_timeout"])]
+        url = base + ("?" + "&".join(keep) if keep else "")
+    if "sslmode" not in url:
+        url += ("&" if "?" in url else "?") + "sslmode=require"
+    url += "&connect_timeout=10"
+    return url
+
 
 class AsyncResultWrapper:
     def __init__(self, result):
@@ -31,6 +44,7 @@ class AsyncResultWrapper:
         return self._result.fetchall()
     def scalar(self):
         return self._result.scalar()
+
 
 class AsyncSessionWrapper:
     def __init__(self, sync_session):
@@ -48,73 +62,14 @@ class AsyncSessionWrapper:
     async def close(self):
         await asyncio.to_thread(self._sync_session.close)
 
-bq_engine = create_engine(_fix_bq(settings.DATABASE_URL), echo=settings.DEBUG)
-BQSessionFactory = sessionmaker(bind=bq_engine, autocommit=False, autoflush=False)
-
-class bq_session_context:
-    async def __aenter__(self):
-        self._session = AsyncSessionWrapper(BQSessionFactory())
-        return self._session
-    async def __aexit__(self, exc_type, exc, tb):
-        try:
-            if exc:
-                await self._session.rollback()
-            else:
-                await self._session.commit()
-        finally:
-            await self._session.close()
-
-async def get_bq_db() -> AsyncGenerator[AsyncSessionWrapper, None]:
-    async with bq_session_context() as s:
-        yield s
-
-async def execute_bq_query(sql: str) -> list[dict]:
-    async with bq_session_context() as s:
-        result = await s.execute(text(sql))
-        cols = list(result.keys())
-        return [dict(zip(cols, r)) for r in result.fetchmany(settings.MAX_SQL_ROWS)]
-
-async def check_bq_health() -> bool:
-    try:
-        async with bq_session_context() as s:
-            return (await s.execute(text("SELECT 1"))).scalar() == 1
-    except:
-        return False
-
-async def wake_bigquery(retries=3, delay=2.0) -> bool:
-    for i in range(1, retries + 1):
-        try:
-            if await check_bq_health():
-                return True
-        except Exception as e:
-            logger.warning(f"BigQuery attempt {i}/{retries}: {e}")
-            if i < retries:
-                await asyncio.sleep(delay)
-    return False
-
 
 # ═══════════════════════════════════════════════════════════════
-# Neon PostgreSQL Connection (RAG only)
+# Neon PostgreSQL Engine
 # ═══════════════════════════════════════════════════════════════
 
 _neon_engine = None
 _NeonSessionFactory = None
 
-def _fix_neon(url: str) -> str:
-    if not url:
-        raise ValueError("NEON_DATABASE_URL not set")
-    url = url.strip().strip('"').strip("'")
-    if url.startswith("postgres://"):
-        url = url.replace("postgres://", "postgresql://", 1)
-    if "?" in url:
-        base, params = url.split("?", 1)
-        keep = [p for p in params.split("&") if not any(k in p for k in ["channel_binding", "connect_timeout"])]
-        url = base + ("?" + "&".join(keep) if keep else "")
-    if "sslmode" not in url:
-        url += ("&" if "?" in url else "?") + "sslmode=require"
-    # Give Neon 10 s to wake from auto-suspend before timing out
-    url += "&connect_timeout=10"
-    return url
 
 def _init_neon():
     global _neon_engine, _NeonSessionFactory
@@ -126,8 +81,8 @@ def _init_neon():
             pool_size=settings.NEON_POOL_SIZE,
             max_overflow=settings.NEON_MAX_OVERFLOW,
             pool_pre_ping=True,
-            pool_timeout=15,        # wait up to 15s for a connection from pool
-            pool_recycle=300,       # recycle connections every 5 min (before Neon kills idle ones)
+            pool_timeout=15,
+            pool_recycle=300,
             echo=settings.DEBUG,
         )
         _NeonSessionFactory = sessionmaker(bind=_neon_engine, autocommit=False, autoflush=False)
@@ -135,6 +90,7 @@ def _init_neon():
     except Exception as e:
         logger.error(f"Neon init failed: {e}")
         _neon_engine = None
+
 
 class neon_session_context:
     async def __aenter__(self):
@@ -145,34 +101,59 @@ class neon_session_context:
         return self._session
     async def __aexit__(self, exc_type, exc, tb):
         try:
-            if exc:
+            if exc_type:
                 await self._session.rollback()
             else:
                 await self._session.commit()
         finally:
             await self._session.close()
 
+
 async def get_neon_db() -> AsyncGenerator[AsyncSessionWrapper, None]:
     async with neon_session_context() as s:
         yield s
+
+
+# ═══════════════════════════════════════════════════════════════
+# SQL Execution — direct asyncpg for generated SQL queries
+# ═══════════════════════════════════════════════════════════════
+
+async def execute_sql_query(sql: str, params: list | None = None) -> list[dict]:
+    """Execute a PostgreSQL SELECT on Neon and return rows as dicts."""
+    import asyncpg
+    conn = await asyncpg.connect(settings.NEON_DATABASE_URL)
+    try:
+        rows = await conn.fetch(sql, *(params or []))
+        return [dict(r) for r in rows]
+    finally:
+        await conn.close()
+
+
+
+# ═══════════════════════════════════════════════════════════════
+# Health Checks
+# ═══════════════════════════════════════════════════════════════
 
 async def check_neon_health() -> bool:
     try:
         async with neon_session_context() as s:
             return (await s.execute(text("SELECT 1"))).scalar() == 1
-    except:
+    except Exception:
         return False
 
-async def wake_neon(retries=3, delay=2.0) -> bool:
+
+
+async def wake_neon(retries: int = 3, delay: float = 2.0) -> bool:
     for i in range(1, retries + 1):
         try:
             if await check_neon_health():
                 return True
         except Exception as e:
-            logger.warning(f"Neon attempt {i}/{retries}: {e}")
+            logger.warning(f"Neon PostgreSQL attempt {i}/{retries}: {e}")
             if i < retries:
                 await asyncio.sleep(delay)
     return False
+
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -180,15 +161,12 @@ async def wake_neon(retries=3, delay=2.0) -> bool:
 # ═══════════════════════════════════════════════════════════════
 
 async def dispose_all():
-    try:
-        await asyncio.to_thread(bq_engine.dispose)
-    except:
-        pass
     if _neon_engine:
         try:
             await asyncio.to_thread(_neon_engine.dispose)
-        except:
+        except Exception:
             pass
+
 
 class Base(DeclarativeBase):
     pass

@@ -285,13 +285,22 @@ def detect_edge_case(question: str) -> dict | None:
         r"(what|how much).{0,20}(together|combined|altogether|in total)\b",
         r"\b(difference|gap|subtract|minus)\b.{0,30}\b(both|them|these|those|two)\b",
         # Comparison of prior results
-        r"which\s+(is|one\s+is|are)\s+(more|less|higher|lower|bigger|smaller|greater)\b",
+        r"which\s+(is|one\s+is|are|has)\s+(the\s+)?(more|most|less|least|higher|highest|lower|lowest|bigger|biggest|smaller|smallest|greater|greatest|maximum|minimum|max|min)\b",
         r"(more|less|higher|lower|bigger|smaller|greater)\s+(of\s+)?(the\s+)?(two|both|them|these)\b",
+        # Superlative / ranking follow-ups on prior result
+        r"\b(highest|lowest|most|least|maximum|minimum|max|min|top|bottom|first|last|largest|smallest)\b.{0,20}\b(in\s+this|of\s+these|from\s+(this|above|that|the)|among|one)\b",
+        r"\b(in\s+this|from\s+(this|above|that|the)|of\s+these|among\s+these)\b.{0,20}\b(highest|lowest|most|least|maximum|minimum|max|min|top|bottom|largest|smallest)\b",
+        r"^(which|what|who).{0,30}(highest|lowest|most|least|maximum|minimum|top|bottom|largest|smallest)\b",
         # Short pronoun-only follow-ups ("what about both?", "and them?")
         r"^(what\s+about|and|also|plus)\s+(both|them|these|those|it|the\s+other)[\s?]*$",
         # "now show both", "combine them", "add those up"
-        r"^(now\s+)?(show|give|tell|calculate|compute|find)\s+(me\s+)?(both|them|the\s+total|the\s+sum|the\s+combined)\b",
+        r"^(now\s+)?(show|give|tell|calculate|compute|find|sort|order|rank)\s+(me\s+)?(both|them|the\s+total|the\s+sum|the\s+combined|by|in)\b",
         r"^(add|sum|combine|total)\s+(them|both|those|these)\s*(up)?[\s?]*$",
+        # Generic follow-ups referencing prior context ("in this", "from above", "of these")
+        r"^.{0,15}\b(in\s+this|from\s+(this|above|that|the\s+above)|of\s+these|from\s+these)\b",
+        # "and the X?", "what about X?" — short contextual follow-ups
+        r"^(and|but)\s+(the|what)\b.{0,40}$",
+        r"^what\s+about\s+.{2,30}$",
     ]
     if any(re.search(p, ql) for p in _FOLLOWUP):
         return None

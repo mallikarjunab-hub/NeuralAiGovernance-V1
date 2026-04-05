@@ -47,6 +47,11 @@ _SYNONYMS = {
     "how much":         ["amount", "rs", "rupees", "monthly", "financial assistance"],
     "stop":             ["cancel", "discontinue", "begging", "employed", "income exceeds"],
     # Additional synonyms for better coverage
+    "payout":           ["disbursement", "payment", "monthly amount", "total paid", "yearly"],
+    "comparison":       ["compare", "versus", "vs", "year wise", "yoy", "trend"],
+    "last 3 years":     ["three years", "3 year comparison", "year over year", "yoy"],
+    "compliance":       ["life certificate", "submitted", "not submitted", "suspended", "pending"],
+    "batch":            ["ecs batch", "payment batch", "monthly batch", "disbursement batch"],
     "income":           ["ceiling", "limit", "annual income", "family income", "per capita"],
     "income limit":     ["ceiling income", "annual family", "per capita income", "qualifies"],
     "age":              ["years old", "60 years", "senior", "minimum age", "above"],
@@ -136,19 +141,19 @@ async def ingest(db, name: str, content: str, meta: dict = None):
             continue
         emb = await embed_text(c)
         emb_s = "[" + ",".join(str(x) for x in emb) + "]"
-        safe_text = c.replace("'", "''")
-        safe_name = name.replace("'", "''")
-        safe_meta = meta_str.replace("'", "''")
-        await db.execute(text(
-            f"INSERT INTO document_chunks "
-            f"(doc_name, chunk_index, chunk_text, embedding, metadata, search_vector) "
-            f"VALUES ('{safe_name}', {i}, '{safe_text}', '{emb_s}'::vector, "
-            f"'{safe_meta}'::jsonb, to_tsvector('english', '{safe_text}'))"
-        ))
+        await db.execute(
+            text(
+                "INSERT INTO document_chunks "
+                "(doc_name, chunk_index, chunk_text, embedding, metadata, search_vector) "
+                "VALUES (:name, :idx, :chunk, :emb::vector, :meta::jsonb, "
+                "to_tsvector('english', :chunk))"
+            ),
+            {"name": name, "idx": i, "chunk": c, "emb": emb_s, "meta": meta_str},
+        )
         if (i + 1) % 5 == 0:
             logger.info(f"  Ingested {i+1}/{len(chunks)} chunks...")
     await db.commit()
-    logger.info(f"✅ Ingested {len(chunks)} chunks for '{name}'")
+    logger.info(f"Ingested {len(chunks)} chunks for '{name}'")
 
 
 async def search(db, query: str, top_k: int = TOP_K_DEFAULT) -> list[dict]:
@@ -499,6 +504,62 @@ Residency requirement for DSSY eligibility:
 - Proof: Residence certificate from Mamlatdar of the Taluka, OR certificate from a Gazetted Officer of State Government
 - The 15-year residency requirement is strictly enforced
 - Temporary residents or those with less than 15 years domicile do NOT qualify""",
+
+        """[DIRECT ANSWER: Payment Process and ECS Details]
+DSSY monthly payment process:
+- Payments are processed monthly through Electronic Clearance System (ECS)
+- Each month, a payment batch is created (e.g., BATCH/2024/04 for April 2024)
+- Payments are deposited directly into beneficiary bank accounts
+- Payment statuses: Paid (successful), Pending (in process), Failed (bounced/rejected)
+- Failed payments can be due to: closed bank account, incorrect IFSC code, deceased beneficiary not updated, or life certificate not submitted
+- Fiscal year runs April to March (e.g., FY 2024-25 = April 2024 to March 2025)
+- Monthly payout for all active beneficiaries is approximately Rs. 65-75 crore per month""",
+
+        """[DIRECT ANSWER: Life Certificate Compliance Process]
+Life Certificate compliance for DSSY beneficiaries:
+- Due period: April and May each year
+- All active beneficiaries must submit annually
+- Can be issued by: Bank Manager where pension is deposited, OR a Gazetted Officer, OR via Aadhaar eKYC (since 2023)
+- Late submissions (after May 31) are flagged but accepted
+- Non-submission leads to payment suspension
+- Payments are reinstated once certificate is submitted
+- Typical compliance rate varies by taluka and district
+- Directorate sends reminders in March for upcoming certificates""",
+
+        """[DIRECT ANSWER: DSSY Beneficiary Category Details]
+DSSY has 7 beneficiary categories with different monthly amounts:
+1. Senior Citizens (SC): Rs. 2,000/month — largest category (~58% of total, ~163,500 active)
+2. Widows (WD): Rs. 2,500/month — second largest (~25%, ~70,500 active)
+3. Single Women (SW): Rs. 2,000/month — divorced, abandoned, unmarried 50+ (~6%, ~16,900 active)
+4. Disabled Adult (DAC): Rs. 2,000/month — adults with disability certificate (~4%, ~11,800 active)
+5. Disabled Child <90% (DCB90): Rs. 2,500/month — children with <90% disability (~2%, ~6,500 active)
+6. Disabled 90%+ (DC90): Rs. 3,500/month — highest rate, smallest category (~1.5%, ~4,200 active)
+7. HIV/AIDS (HIV): Rs. 2,000/month — HIV/AIDS patients (~3%, ~8,500 active)
+Total active beneficiaries: approximately 282,000""",
+
+        """[DIRECT ANSWER: Neural AI Governance Framework]
+Neural AI Governance is an AI-driven governance intelligence framework designed by Bharath Light House Software Solutions Pvt Ltd for government administration.
+Key features:
+- Natural language query processing (ask questions in plain English about DSSY data)
+- Statistical analysis and dynamic reporting on beneficiary data
+- Permutation-combination queries across dimensions (category × district × gender × age)
+- Multi-language support: English, Hindi, Telugu, Kannada, Marathi, Konkani
+- Voice input with audio transcription
+- Real-time dashboard with KPI cards and charts
+- 3-way intelligent routing: Edge cases → SQL queries → RAG document search
+- Anti-hallucination safeguards ensure accurate numbers from database
+- Conversation memory for follow-up questions
+The PoC was proposed for DSSY under the Department of Social Welfare, Government of Goa.""",
+
+        """[DIRECT ANSWER: Payment History and Year-wise Comparison]
+DSSY payment data is tracked in payment_summary table with year-wise aggregates:
+- Payment data covers 6 fiscal years: FY 2020-21 through FY 2025-26
+- Each year has data broken down by beneficiary category and district
+- Monthly payout (all categories combined) is approximately Rs. 65-75 crore
+- Payment batches (72 total) track monthly ECS disbursements
+- For last 3 years comparison, the system queries payment_summary grouped by year
+- Year-over-year (YoY) analysis shows payment trends across fiscal years
+- Payment failure rates and compliance metrics are tracked per batch""",
     ]
 
     chunks.extend(synthetic_chunks)

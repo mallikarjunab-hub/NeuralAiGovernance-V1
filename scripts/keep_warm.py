@@ -16,9 +16,9 @@ while True:
         with urllib.request.urlopen(URL, timeout=15) as r:
             data = json.loads(r.read())
             neon = data.get("neon_pgvector", "?")
-            bq   = data.get("bigquery", "?")
+            db   = data.get("neon", "?")
             ts   = datetime.datetime.now().strftime("%H:%M:%S")
-            print(f"[{ts}] OK — BigQuery: {bq} | Neon: {neon}")
+            print(f"[{ts}] OK — Neon: {db} | Neon pgvector: {neon}")
     except Exception as e:
         ts = datetime.datetime.now().strftime("%H:%M:%S")
         print(f"[{ts}] WARN — {e}")

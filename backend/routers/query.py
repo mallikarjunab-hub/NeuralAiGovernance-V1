@@ -1,7 +1,7 @@
 """
 /api/query — single endpoint, 3-way auto-routing:
   1. EDGE  : greetings, identity, silly, off-topic → instant canned response (no API cost)
-  2. SQL   : data question → Gemini generates BigQuery SQL → execute → NL answer + chart
+  2. SQL   : data question → Gemini generates PostgreSQL SQL → execute → NL answer + chart
   3. RAG   : scheme knowledge → Neon pgvector hybrid search → Gemini answer from DSSY docs
 
 Multi-turn conversation:
@@ -16,7 +16,7 @@ Smart fallback: SQL fail → try RAG.  RAG low confidence → try SQL.
 import time, logging, base64
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 
-from backend.database import execute_bq_query, neon_session_context
+from backend.database import execute_sql_query, neon_session_context
 from backend.schemas import QueryRequest, QueryResponse
 from backend.services.edge_handler import detect_edge_case
 from backend.services.gemini_service import (
@@ -121,7 +121,7 @@ async def query(req: QueryRequest):
             confidence="low",
         )
 
-    # ── Step 4b: SQL Path (BigQuery) ──────────────────────────
+    # ── Step 4b: SQL Path (Neon PostgreSQL) ───────────────────
     # Cache key uses the RESOLVED question so "what about inactive?" hits
     # the same cache as "How many inactive beneficiaries are there?"
     cached = await get_cached(resolved)
@@ -168,11 +168,11 @@ async def query(req: QueryRequest):
         if not ok:
             raise HTTPException(422, f"Query validation failed: {reason}")
 
-        # Execute on BigQuery
+        # Execute on Neon PostgreSQL
         try:
-            results = await execute_bq_query(sql)
+            results = await execute_sql_query(sql)
         except Exception as e:
-            logger.warning(f"BigQuery exec failed: {e}")
+            logger.warning(f"Neon PostgreSQL exec failed: {e}")
             rag_result = await _try_rag(resolved, req.language, start, ctx)
             if rag_result:
                 await context_store.add_turn(

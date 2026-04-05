@@ -45,7 +45,7 @@ class ConversationTurn:
     resolved_question: str
     answer:            str
     intent:            str              # "SQL" | "RAG" | "EDGE"
-    sql_data:          Optional[list]   # raw BigQuery rows for arithmetic follow-ups
+    sql_data:          Optional[list]   # raw SQL rows for arithmetic follow-ups
 
 
 # ── Store ─────────────────────────────────────────────────────────────────────
