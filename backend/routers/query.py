@@ -44,18 +44,19 @@ async def _try_rag(question: str, language: str, start: float,
     """Attempt RAG search on Neon. Returns QueryResponse if good match, else None."""
     try:
         async with neon_session_context() as neon_db:
-            chunks = await rag_search(neon_db, question, top_k=7)
-            relevant = [c for c in chunks if c["similarity"] >= 0.18] or chunks[:3]
+            chunks = await rag_search(neon_db, question, top_k=8)
+            relevant = [c for c in chunks if c["similarity"] >= 0.15] or chunks[:4]
             if not relevant:
                 return None
             answer = await rag_answer(question, [c["text"] for c in relevant], language, context)
-            if "not available" in answer.lower() and relevant[0]["similarity"] < 0.22:
+            # Only discard if answer says "not available" AND best match is very weak
+            if "not available" in answer.lower() and relevant[0]["similarity"] < 0.17:
                 return None
             return QueryResponse(
                 question=question, answer=answer, intent="RAG",
                 row_count=0,
                 execution_time_ms=int((time.time() - start) * 1000),
-                confidence="high" if relevant[0]["similarity"] > 0.60 else "medium",
+                confidence="high" if relevant[0]["similarity"] > 0.55 else "medium",
             )
     except Exception as e:
         logger.warning(f"RAG fallback failed: {e}")
@@ -70,16 +71,6 @@ async def _try_web_search(question: str, language: str, start: float) -> QueryRe
             return None
 
         answer = result["answer"]
-        sources = result.get("sources", [])
-
-        # Append source references to the answer
-        if sources:
-            source_lines = "\n\n**Sources:**"
-            for s in sources[:3]:
-                title = s.get("title", "Web source")
-                uri = s.get("uri", "")
-                source_lines += f"\n- [{title}]({uri})" if uri else f"\n- {title}"
-            answer += source_lines
 
         return QueryResponse(
             question=question,
@@ -410,12 +401,5 @@ async def suggestions():
             "How many widows benefited from the 2021 amendment?",
             "Where is the Department of Social Welfare located?",
             "What was the original pension amount when DSSY started?",
-        ],
-        "📈 Analytics": [
-            "Show year-wise registration trend",
-            "What is the payment success rate?",
-            "Category-wise monthly payout breakdown",
-            "Top 5 talukas by active beneficiaries",
-            "District-wise payment comparison",
         ],
     }}
