@@ -38,9 +38,9 @@ wildly different from these without a clear filter reason):
     Senior Citizen (SC)                : ~163,560  ← largest category by far
     Widow (WD)                         :  ~70,500
     Single Woman (SW)                  :  ~16,920
-    Disabled Adult (DAC)               :  ~11,844
-    Disabled Child <90% (DCB90)        :   ~6,486
-    Disabled 90%+ (DC90)               :   ~4,230  ← smallest (NOT ~7,000 or ~4,000)
+    Disabled 40% (DIS-40)              :  ~11,844
+    Disabled 80% (DIS-80)              :   ~6,486
+    Disabled 90% (DIS-90)              :   ~4,230  ← smallest (NOT ~7,000 or ~4,000)
     HIV/AIDS (HIV)                     :   ~8,460
   District split: North Goa ~47%, South Goa ~53%
   Payment batches                      :      72 (one per month, FY 2020-21 → 2025-26)
@@ -50,7 +50,7 @@ wildly different from these without a clear filter reason):
 
 ANTI-HALLUCINATION RULES:
   1. NEVER add a LIMIT clause to a COUNT(*) query — COUNT returns one row, not thousands.
-  2. NEVER confuse "Disabled 90%+" with "Disabled Adult" — they are different category_codes.
+  2. NEVER confuse "Disabled 90%" (DIS-90) with "Disabled 40%" (DIS-40) — they are different category_codes (DIS-40, DIS-80, DIS-90).
   3. When asked "which category is lowest", run ORDER BY count ASC — the first row is the answer.
      The answer is Disabled 90%+ (~4,230), NOT Senior Citizen.
   4. "Last 3 years payments" or "compare payments" → query payment_summary table (NOT payments table).
@@ -103,10 +103,13 @@ CREATE TABLE villages (
 
 CREATE TABLE categories (
     category_id SERIAL PRIMARY KEY,
-    category_code VARCHAR(20) UNIQUE,  -- SC, WD, SW, DAC, DCB90, DC90, HIV
-    category_name VARCHAR(100),        -- 'Senior Citizen','Widow','Single Woman','Disabled Adult','Disabled Child <90%','Disabled 90%+','HIV/AIDS'
+    category_code VARCHAR(20) UNIQUE,  -- SC, WD, SW, DIS-40, DIS-80, DIS-90, HIV, LEPROSY, DEAF, CANCER, KIDNEY, SICKLE
+    category_name VARCHAR(100),        -- 'Senior Citizen','Widow','Single Woman','Disabled 40%','Disabled 80%','Disabled 90%','HIV/AIDS','Leprosy','Deaf and Dumb','Cancer Patient','Kidney Failure','Sickle Cell'
     description TEXT,
-    current_monthly_amount DECIMAL(10,2)  -- current Rs/month for this category
+    current_monthly_amount DECIMAL(10,2),  -- current Rs/month for this category
+    disability_percentage INT,             -- NULL for non-disability; 40, 80, 90
+    is_active BOOLEAN DEFAULT TRUE,
+    introduced_year INT
 );
 
 CREATE TABLE banks (
@@ -150,12 +153,18 @@ CREATE TABLE payments (
     payment_id SERIAL PRIMARY KEY,
     beneficiary_id INT REFERENCES beneficiaries(beneficiary_id),
     payment_date DATE NOT NULL,
-    payment_month SMALLINT,        -- auto-derived from payment_date
-    payment_year SMALLINT,         -- auto-derived from payment_date
+    payment_month SMALLINT,        -- GENERATED STORED from payment_date
+    payment_year SMALLINT,         -- GENERATED STORED from payment_date
+    fiscal_period_id INT REFERENCES fiscal_periods(fiscal_period_id),  -- auto-assigned via trigger
     amount DECIMAL(10,2) NOT NULL,
-    status VARCHAR(20),            -- 'Paid','Pending','Failed' (Title Case!)
+    expected_amount DECIMAL(10,2), -- for shortfall queries
+    status VARCHAR(20),            -- 'Paid','Pending','Failed','Reversed' (Title Case!)
     payment_method VARCHAR(50),
     transaction_id VARCHAR(100),
+    bank_id INT REFERENCES banks(bank_id),
+    batch_id INT REFERENCES payment_batches(batch_id),  -- linked ECS batch
+    processed_by INT REFERENCES officers(officer_id),
+    failure_reason VARCHAR(200),
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -166,7 +175,10 @@ CREATE TABLE payment_summary (
     summary_id SERIAL PRIMARY KEY,
     payment_year INT NOT NULL,
     payment_month INT NOT NULL,
+    month_name VARCHAR(15),            -- e.g. 'January'
     fiscal_year INT,
+    fiscal_year_label VARCHAR(10),     -- e.g. '2024-25'
+    quarter SMALLINT,                  -- 1-4
     district_id INT REFERENCES districts(district_id),
     taluka_id INT REFERENCES talukas(taluka_id),
     category_id INT REFERENCES categories(category_id),
@@ -174,6 +186,7 @@ CREATE TABLE payment_summary (
     paid_count INT,
     pending_count INT,
     failed_count INT,
+    on_hold_count INT DEFAULT 0,
     total_base_amount DECIMAL(18,2),   -- expected total
     total_net_amount DECIMAL(18,2),    -- actually paid amount
     male_count INT,
@@ -216,13 +229,42 @@ CREATE TABLE life_certificates (
     reinstatement_date  DATE
 );
 
+-- OFFICERS (administrative officers who process approvals)
+CREATE TABLE officers (
+    officer_id SERIAL PRIMARY KEY,
+    officer_code VARCHAR(20) UNIQUE,
+    full_name VARCHAR(150),
+    designation VARCHAR(100),     -- 'DSWO','ASWO','DEO','AO','TSWO'
+    department VARCHAR(100) DEFAULT 'Social Welfare',
+    district_id INT REFERENCES districts(district_id),
+    taluka_id INT REFERENCES talukas(taluka_id),
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+-- FISCAL PERIODS (April-March fiscal year quarters, 2018-2030)
+CREATE TABLE fiscal_periods (
+    fiscal_period_id SERIAL PRIMARY KEY,
+    fiscal_year INT NOT NULL,          -- e.g. 2024 = FY 2024-25
+    fiscal_year_label VARCHAR(10),     -- e.g. '2024-25'
+    quarter SMALLINT CHECK (quarter BETWEEN 1 AND 4),  -- Q1=Apr-Jun, Q2=Jul-Sep, Q3=Oct-Dec, Q4=Jan-Mar
+    quarter_label VARCHAR(10),         -- e.g. 'Q1 FY25'
+    period_start DATE NOT NULL,
+    period_end DATE NOT NULL,
+    is_current BOOLEAN DEFAULT FALSE,
+    UNIQUE (fiscal_year, quarter)
+);
+
 -- SCHEME ENROLLMENTS (tracks category changes per beneficiary)
 CREATE TABLE scheme_enrollments (
     enrollment_id SERIAL PRIMARY KEY,
     beneficiary_id INT REFERENCES beneficiaries(beneficiary_id),
     category_id INT REFERENCES categories(category_id),
     enrollment_date DATE NOT NULL,
+    enrollment_year INT,        -- GENERATED STORED from enrollment_date
     end_date DATE,              -- NULL means currently enrolled
+    end_reason VARCHAR(200),
+    monthly_amount_at_enrollment DECIMAL(10,2),
+    approved_by INT REFERENCES officers(officer_id),
     is_current BOOLEAN DEFAULT TRUE
 );
 
@@ -233,7 +275,19 @@ CREATE TABLE beneficiary_status_history (
     old_status VARCHAR(20),
     new_status VARCHAR(20),
     changed_at TIMESTAMPTZ DEFAULT NOW(),
-    reason VARCHAR(200)
+    changed_by INT REFERENCES officers(officer_id),
+    reason VARCHAR(200),
+    remarks TEXT
+);
+
+-- CATEGORY AMOUNT HISTORY (tracks when monthly pension amounts changed)
+CREATE TABLE category_amount_history (
+    id SERIAL PRIMARY KEY,
+    category_id INT REFERENCES categories(category_id),
+    monthly_amount DECIMAL(10,2) NOT NULL,
+    effective_from DATE NOT NULL,
+    effective_to DATE,           -- NULL = currently active rate
+    reason TEXT
 );
 
 -- KEY RELATIONSHIPS FOR JOINS:
@@ -241,15 +295,24 @@ CREATE TABLE beneficiary_status_history (
 -- beneficiaries.district_id -> districts.district_id (get district_name)
 -- beneficiaries.taluka_id -> talukas.taluka_id (get taluka_name)
 -- beneficiaries.village_id -> villages.village_id (get village_name)
+-- beneficiaries.bank_id -> banks.bank_id (get bank_name)
+-- beneficiaries.registered_by -> officers.officer_id
 -- payments.beneficiary_id -> beneficiaries.beneficiary_id
+-- payments.batch_id -> payment_batches.batch_id
+-- payments.fiscal_period_id -> fiscal_periods.fiscal_period_id
 -- payment_summary: pre-aggregated by (payment_year, payment_month, district_id, taluka_id, category_id)
 -- life_certificates.beneficiary_id -> beneficiaries.beneficiary_id
+-- scheme_enrollments.beneficiary_id -> beneficiaries.beneficiary_id
+-- beneficiary_status_history.beneficiary_id -> beneficiaries.beneficiary_id
+-- category_amount_history.category_id -> categories.category_id
 
 -- COMMON QUERY PATTERNS:
 -- Beneficiary count by category: SELECT c.category_name, COUNT(*) FROM beneficiaries b JOIN categories c ON b.category_id=c.category_id WHERE b.status='Active' GROUP BY c.category_name
 -- YoY payments: SELECT payment_year, SUM(total_net_amount) AS total_paid FROM payment_summary GROUP BY payment_year ORDER BY payment_year
 -- District-wise active: SELECT d.district_name, COUNT(*) FROM beneficiaries b JOIN districts d ON b.district_id=d.district_id WHERE b.status='Active' GROUP BY d.district_name
 -- Life cert compliance: SELECT t.taluka_name, COUNT(lc.cert_id) AS submitted, COUNT(b.beneficiary_id) AS total FROM beneficiaries b JOIN talukas t ON b.taluka_id=t.taluka_id LEFT JOIN life_certificates lc ON lc.beneficiary_id=b.beneficiary_id AND lc.due_year=2025 WHERE b.status='Active' GROUP BY t.taluka_name
+-- Status history: SELECT new_status, COUNT(*) FROM beneficiary_status_history WHERE DATE_PART('year', changed_at)=2024 GROUP BY new_status
+-- Category transfers: SELECT se.beneficiary_id, c.category_name, se.enrollment_date FROM scheme_enrollments se JOIN categories c ON se.category_id=c.category_id WHERE se.is_current=FALSE
 """
 
 # ── Few-Shot Examples ──────────────────────────────────────────────────────────
@@ -441,10 +504,10 @@ Q: payment batch for april 2025 / batch details april 2025
 SQL: SELECT pb.batch_reference, pb.batch_status, pb.total_beneficiaries, pb.total_amount, pb.paid_count, pb.failed_count, pb.initiated_at, pb.completed_at FROM payment_batches pb WHERE pb.payment_year = 2025 AND pb.payment_month = 4;
 
 Q: life certificate compliance rate by taluka / which talukas have lowest compliance
-SQL: SELECT t.taluka_name AS taluka, d.district_name AS district, COUNT(b.beneficiary_id) AS total_active, COUNT(lc.cert_id) AS submitted, COUNT(b.beneficiary_id) - COUNT(lc.cert_id) AS not_submitted, ROUND(COUNT(lc.cert_id) * 100.0 / NULLIF(COUNT(b.beneficiary_id), 0), 2) AS compliance_pct FROM beneficiaries b JOIN talukas t ON b.taluka_id = t.taluka_id JOIN districts d ON b.district_id = d.district_id LEFT JOIN life_certificates lc ON lc.beneficiary_id = b.beneficiary_id AND lc.due_year = EXTRACT(YEAR FROM CURRENT_DATE)::INT WHERE b.status = 'active' GROUP BY t.taluka_name, d.district_name ORDER BY compliance_pct ASC;
+SQL: SELECT t.taluka_name AS taluka, d.district_name AS district, COUNT(b.beneficiary_id) AS total_active, COUNT(lc.cert_id) AS submitted, COUNT(b.beneficiary_id) - COUNT(lc.cert_id) AS not_submitted, ROUND(COUNT(lc.cert_id) * 100.0 / NULLIF(COUNT(b.beneficiary_id), 0), 2) AS compliance_pct FROM beneficiaries b JOIN talukas t ON b.taluka_id = t.taluka_id JOIN districts d ON b.district_id = d.district_id LEFT JOIN life_certificates lc ON lc.beneficiary_id = b.beneficiary_id AND lc.due_year = EXTRACT(YEAR FROM CURRENT_DATE)::INT WHERE b.status = 'Active' GROUP BY t.taluka_name, d.district_name ORDER BY compliance_pct ASC;
 
 Q: how many beneficiaries have not submitted life certificate / pending life certificates 2025
-SQL: SELECT COUNT(*) AS not_submitted FROM beneficiaries b WHERE b.status = 'active' AND NOT EXISTS (SELECT 1 FROM life_certificates lc WHERE lc.beneficiary_id = b.beneficiary_id AND lc.due_year = 2025);
+SQL: SELECT COUNT(*) AS not_submitted FROM beneficiaries b WHERE b.status = 'Active' AND NOT EXISTS (SELECT 1 FROM life_certificates lc WHERE lc.beneficiary_id = b.beneficiary_id AND lc.due_year = 2025);
 
 Q: beneficiaries with payment suspended due to life certificate / suspended payments count
 SQL: SELECT COUNT(DISTINCT lc.beneficiary_id) AS suspended_count FROM life_certificates lc WHERE lc.payment_suspended = TRUE;
@@ -453,10 +516,28 @@ Q: late life certificate submissions by category
 SQL: SELECT c.category_name AS category, COUNT(lc.cert_id) AS late_submissions, ROUND(AVG(lc.days_late), 1) AS avg_days_late FROM life_certificates lc JOIN beneficiaries b ON lc.beneficiary_id = b.beneficiary_id JOIN categories c ON b.category_id = c.category_id WHERE lc.is_late_submission = TRUE GROUP BY c.category_name ORDER BY late_submissions DESC;
 
 Q: life certificate compliance by district
-SQL: SELECT d.district_name AS district, COUNT(b.beneficiary_id) AS total_active, COUNT(lc.cert_id) AS submitted, ROUND(COUNT(lc.cert_id) * 100.0 / NULLIF(COUNT(b.beneficiary_id), 0), 2) AS compliance_pct FROM beneficiaries b JOIN districts d ON b.district_id = d.district_id LEFT JOIN life_certificates lc ON lc.beneficiary_id = b.beneficiary_id AND lc.due_year = EXTRACT(YEAR FROM CURRENT_DATE)::INT WHERE b.status = 'active' GROUP BY d.district_name ORDER BY compliance_pct ASC;
+SQL: SELECT d.district_name AS district, COUNT(b.beneficiary_id) AS total_active, COUNT(lc.cert_id) AS submitted, ROUND(COUNT(lc.cert_id) * 100.0 / NULLIF(COUNT(b.beneficiary_id), 0), 2) AS compliance_pct FROM beneficiaries b JOIN districts d ON b.district_id = d.district_id LEFT JOIN life_certificates lc ON lc.beneficiary_id = b.beneficiary_id AND lc.due_year = EXTRACT(YEAR FROM CURRENT_DATE)::INT WHERE b.status = 'Active' GROUP BY d.district_name ORDER BY compliance_pct ASC;
 
 Q: year wise life certificate submissions / how many life certs submitted each year
 SQL: SELECT lc.due_year AS year, COUNT(*) AS total_submitted, COUNT(*) FILTER (WHERE lc.is_late_submission = TRUE) AS late_submissions, COUNT(*) FILTER (WHERE lc.payment_suspended = TRUE) AS suspensions FROM life_certificates lc GROUP BY lc.due_year ORDER BY lc.due_year DESC;
+
+Q: beneficiaries who changed category / category transfers
+SQL: SELECT b.beneficiary_code, c_old.category_name AS from_category, c_new.category_name AS to_category, se.end_date AS transfer_date FROM scheme_enrollments se JOIN beneficiaries b ON se.beneficiary_id = b.beneficiary_id JOIN categories c_old ON se.category_id = c_old.category_id JOIN scheme_enrollments se_new ON se_new.beneficiary_id = se.beneficiary_id AND se_new.is_current = TRUE AND se.is_current = FALSE JOIN categories c_new ON se_new.category_id = c_new.category_id WHERE se.end_date IS NOT NULL ORDER BY se.end_date DESC LIMIT 20;
+
+Q: how many beneficiaries became inactive in 2024 / status changes in 2024
+SQL: SELECT new_status, COUNT(*) AS count FROM beneficiary_status_history WHERE DATE_PART('year', changed_at) = 2024 GROUP BY new_status ORDER BY count DESC;
+
+Q: status transitions by year / yearly status change trend
+SQL: SELECT DATE_PART('year', changed_at)::INT AS year, new_status, COUNT(*) AS count FROM beneficiary_status_history GROUP BY year, new_status ORDER BY year DESC, count DESC;
+
+Q: enrollments by year / enrollment trend
+SQL: SELECT enrollment_year AS year, COUNT(*) AS enrollments FROM scheme_enrollments GROUP BY enrollment_year ORDER BY enrollment_year;
+
+Q: current fiscal year / what fiscal year is it
+SQL: SELECT fiscal_year, fiscal_year_label, quarter, quarter_label, period_start, period_end FROM fiscal_periods WHERE is_current = TRUE;
+
+Q: pension amount history for senior citizens / when did pension amount change
+SQL: SELECT cah.monthly_amount, cah.effective_from, cah.effective_to, cah.reason FROM category_amount_history cah JOIN categories c ON cah.category_id = c.category_id WHERE c.category_name = 'Senior Citizen' ORDER BY cah.effective_from;
 """
 
 # ── Follow-up signal detection (heuristic, no API call) ───────────────────────
@@ -478,8 +559,14 @@ def is_followup(question: str, context: list[ConversationTurn]) -> bool:
     """
     Fast heuristic: returns True if the question is likely a follow-up
     that needs resolution before being routed. Skips Gemini call if False.
+    Only considers analytical turns (SQL/RAG) — EDGE turns (greetings, etc.)
+    don't establish context worth following up on.
     """
     if not context:
+        return False
+    # Only consider non-EDGE turns as valid prior context
+    analytical = [t for t in context if t.intent != "EDGE"]
+    if not analytical:
         return False
     q = question.lower().strip()
     # Very short questions (≤5 words) are almost always follow-ups
@@ -494,11 +581,17 @@ def _fmt_context(context: list[ConversationTurn]) -> str:
     """
     Render conversation history into a compact block for injection into prompts.
     Includes raw sql_data when available so the model can reference actual numbers.
+    EDGE turns (greetings, thanks, etc.) are excluded — they carry no analytical
+    content and would confuse the question resolver and SQL generator.
     """
     if not context:
         return ""
+    # Filter out EDGE turns — they add noise to SQL/RAG resolution
+    analytical = [t for t in context if t.intent != "EDGE"]
+    if not analytical:
+        return ""
     lines = ["CONVERSATION HISTORY (for context — use to resolve references and maintain continuity):"]
-    for i, t in enumerate(context, 1):
+    for i, t in enumerate(analytical, 1):
         lines.append(f"[{i}] User asked: {t.resolved_question}")
         lines.append(f"     Answer: {t.answer}")
         if t.sql_data:
@@ -521,8 +614,10 @@ def build_question_resolver_prompt(question: str, context: list[ConversationTurn
       "show females only"               → "Show female beneficiary count district-wise" (from prior district context)
       "what about North Goa?"           → "How many active beneficiaries are in North Goa?" (from prior breakdown)
     """
+    # Filter out EDGE turns — they carry no analytical context for follow-up resolution
+    analytical = [t for t in context if t.intent != "EDGE"]
     ctx_lines = []
-    for i, t in enumerate(context, 1):
+    for i, t in enumerate(analytical, 1):
         ctx_lines.append(f"[{i}] User asked: {t.resolved_question}")
         ctx_lines.append(f"     System answered: {t.answer}")
         if t.sql_data:
@@ -572,9 +667,12 @@ SQL  — question wants COUNTS, STATISTICS, LISTS, or COMPARISONS from the benef
        percentage, village-wise, gender, registration, female, male, category-wise, combined, sum,
        last 3 years, year-wise, year wise, monthly, 2023, 2024, 2025, payment trend, payment comparison,
        which is lowest, which is highest, which has least, which has most, rank, ranked, sort by,
-       disabled 90, hiv, single woman, widow, senior citizen count, beneficiary count,
+       disabled 90, disabled 40, disabled 80, hiv, single woman, widow, senior citizen count, beneficiary count,
        life certificate compliance, life cert submitted, not submitted, payment suspended, suspended payments,
-       batch, payment batch, ecs batch, batch status, batch failures, batch total, batch reference
+       batch, payment batch, ecs batch, batch status, batch failures, batch total, batch reference,
+       dashboard, dynamic dashboard, chart, visualization, graph, report, fiscal year, fiscal period,
+       enrollment, enrolled, category transfer, status change, status history, became inactive, became deceased,
+       pension amount history, amount change, officer, approval
 
 RAG  — question wants RULES, POLICY, ELIGIBILITY, DOCUMENTS, AMOUNTS, HISTORY, or PROCEDURES
        from OFFICIAL SCHEME DOCUMENTS
@@ -594,6 +692,16 @@ EXAMPLES:
 "What is the income limit for DSSY?" → RAG
 "Combined total of active and inactive beneficiaries" → SQL
 "What about inactive beneficiaries?" → SQL
+"How many became inactive in 2024?" → SQL
+"Show enrollment trend by year" → SQL
+"Which beneficiaries changed category?" → SQL
+"What is the current fiscal year?" → SQL
+"Payment batch for April 2025" → SQL
+"When did pension amount change for senior citizens?" → SQL
+"Dynamic dashboard for North Goa" → SQL
+"Show fiscal year wise payment comparison" → SQL
+"How to apply for DSSY?" → RAG
+"What is the cancellation process?" → RAG
 
 Reply ONLY with SQL or RAG.
 
@@ -631,7 +739,7 @@ EXAMPLES:
 - Output ONLY a valid PostgreSQL SQL SELECT or WITH statement
 - Use standard PostgreSQL SQL syntax (NOT BigQuery syntax)
 - Use plain table names without backticks or project prefix
-- Table names: beneficiaries, categories, payments, payment_batches, life_certificates, districts, talukas, villages, banks, payment_summary, scheme_enrollments, beneficiary_status_history, fiscal_periods
+- Table names: beneficiaries, categories, payments, payment_batches, life_certificates, districts, talukas, villages, banks, payment_summary, scheme_enrollments, beneficiary_status_history, fiscal_periods, officers, category_amount_history
 - No markdown, no backticks, no explanation
 - Never select PII columns (aadhaar_number, phone_number, address, account_number)
 - Always use proper JOIN conditions with correct column names
@@ -658,7 +766,7 @@ EXAMPLES:
 - The payments table has only ~35k records (last 6 months). For historical/yearly data use payment_summary (1,680 rows, 6 years)
 - For batch-level data (monthly ECS batches) use payment_batches table
 - NEVER add LIMIT to a COUNT(*)-only query (it returns exactly 1 row)
-- NEVER confuse category codes: DC90='Disabled 90%+', DCB90='Disabled Child <90%', DAC='Disabled Adult'
+- NEVER confuse category codes: DIS-90='Disabled 90%', DIS-80='Disabled 80%', DIS-40='Disabled 40%'
 - If the question cannot be answered from the schema, output exactly: CANNOT_ANSWER
 
 Question: {question}

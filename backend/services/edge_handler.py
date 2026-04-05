@@ -226,6 +226,9 @@ def detect_edge_case(question: str) -> dict | None:
         r"\bsenior\s*citizen", r"\bcategory\b", r"\bregistration\b",
         r"(north|south)\s*goa", r"\bgoa\b.*\b(count|total|how many)",
         r"\bsocial\s*welfare\b", r"\bfinancial\s*assistance\b",
+        r"\bdashboard\b", r"\benroll", r"\bstatus\s*histor",
+        r"\bfiscal\b", r"\bbatch\b", r"\blife\s*cert",
+        r"\bcompliance\b", r"\bvillage\b", r"\bofficer\b",
     ]
     if any(re.search(p, ql) for p in _DSSY_STRONG):
         return None
@@ -318,18 +321,23 @@ def detect_edge_case(question: str) -> dict | None:
         "mormugao", "dharbandora", "ponda", "north goa", "south goa", "panaji", "margao",
         # Categories
         "senior", "widow", "widows", "disabled", "hiv", "aids", "single woman",
-        "category", "categories",
+        "category", "categories", "leprosy", "deaf", "cancer", "kidney", "sickle",
         # Financial
         "payment", "payout", "monthly amount", "financial assistance",
-        "rs\.", "rupee", "lakh", "crore",
+        "rs\.", "rupee", "lakh", "crore", "batch", "ecs", "disburs",
         # Admin
         "eligible", "eligib", "registration", "active", "inactive", "deceased",
         "village", "life certificate", "aadhaar", "documents", "apply",
-        "director", "social welfare", "amendment", "grievance",
-        # Analytics
+        "director", "social welfare", "amendment", "grievance", "officer",
+        # Analytics & Dashboard
         "count", "total", "how many", "show", "list", "compare",
         "trend", "distribution", "breakdown", "compliance", "gender",
         "age", "statistic", "analytic", "data", "report",
+        "dashboard", "chart", "visualization", "graph", "dynamic",
+        # New tables
+        "enrollment", "enrolled", "status history", "status change",
+        "fiscal year", "fiscal period", "quarter", "amount history",
+        "category transfer",
     ]
     has_dssy_context = any(re.search(w, ql) for w in dssy_words)
 

@@ -120,11 +120,12 @@ async def dashboard(
                 GROUP BY d.district_name ORDER BY count DESC
             """),
             # ── Registration trend — monthly buckets ──────────────────────────
-            _Q("""
+            _Q(f"""
                 SELECT
                     TO_CHAR(DATE_TRUNC('month', b.registration_date), 'YYYY-MM') AS period,
                     COUNT(*) AS count
                 FROM beneficiaries b
+                {bj} {wall}
                 GROUP BY DATE_TRUNC('month', b.registration_date)
                 ORDER BY period
             """),
@@ -163,13 +164,13 @@ async def dashboard(
                 GROUP BY c.category_name ORDER BY monthly_payout DESC
             """),
             # ── Beneficiary status trends by year ────────────────────────────
-            _Q("""
+            _Q(f"""
                 SELECT
                     EXTRACT(YEAR FROM b.registration_date)::INT AS year,
                     b.status,
                     COUNT(*) AS count
                 FROM beneficiaries b
-                WHERE b.registration_date IS NOT NULL
+                {bj} {_and("WHERE b.registration_date IS NOT NULL", bw)}
                 GROUP BY year, b.status
                 ORDER BY year, b.status
             """),

@@ -146,9 +146,10 @@ async def query(req: QueryRequest):
         web_result = await _try_web_search(resolved, req.language, start)
         if web_result:
             logger.info("Agentic RAG: web search answered '%s'", resolved[:60])
+            web_result.intent = "WEB"
             await context_store.add_turn(
                 req.session_id, req.question, resolved,
-                web_result.answer, "RAG",
+                web_result.answer, "WEB",
             )
             return web_result
 
@@ -200,9 +201,10 @@ async def query(req: QueryRequest):
             web_result = await _try_web_search(resolved, req.language, start)
             if web_result:
                 logger.info("Agentic RAG (SQL→RAG→Web): '%s'", resolved[:60])
+                web_result.intent = "WEB"
                 await context_store.add_turn(
                     req.session_id, req.question, resolved,
-                    web_result.answer, "RAG",
+                    web_result.answer, "WEB",
                 )
                 return web_result
 
@@ -239,9 +241,10 @@ async def query(req: QueryRequest):
             # Agentic fallback: web search
             web_result = await _try_web_search(resolved, req.language, start)
             if web_result:
+                web_result.intent = "WEB"
                 await context_store.add_turn(
                     req.session_id, req.question, resolved,
-                    web_result.answer, "RAG",
+                    web_result.answer, "WEB",
                 )
                 return web_result
             fallback = (
@@ -270,9 +273,10 @@ async def query(req: QueryRequest):
                 return rag_result
             web_result = await _try_web_search(resolved, req.language, start)
             if web_result:
+                web_result.intent = "WEB"
                 await context_store.add_turn(
                     req.session_id, req.question, resolved,
-                    web_result.answer, "RAG",
+                    web_result.answer, "WEB",
                 )
                 return web_result
 
