@@ -464,11 +464,41 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
       <button class="nlp-chip" onclick="nlpSet('Taluka-wise active beneficiaries in North Goa')">North Goa talukas</button>
       <button class="nlp-chip" onclick="nlpSet('Age group distribution of active beneficiaries')">Age distribution</button>
       <button class="nlp-chip" onclick="nlpSet('Gender breakdown of active beneficiaries')">Gender split</button>
-      <button class="nlp-chip" onclick="nlpSet('Compare payments last 3 years')">Payment trend 3yr</button>
+      <button class="nlp-chip" onclick="nlpSet('Compare payments 2023 vs 2024 vs 2025 with paid failed pending count and total amount')">Payment trend 3yr</button>
       <button class="nlp-chip" onclick="nlpSet('Monthly payment trend for 2024')">Monthly payments 2024</button>
       <button class="nlp-chip" onclick="nlpSet('Which category has the lowest number of beneficiaries')">Lowest category</button>
       <button class="nlp-chip" onclick="nlpSet('Inactive beneficiaries by category')">Inactive by category</button>
       <button class="nlp-chip" onclick="nlpSet('Year wise registration trend')">Registration trend</button>
+      <button class="nlp-chip" onclick="nlpSet('Total active vs inactive vs deceased beneficiaries')">Active vs Inactive vs Deceased</button>
+      <button class="nlp-chip" onclick="nlpSet('Senior citizen beneficiaries above age 80')">Senior citizens 80+</button>
+      <button class="nlp-chip" onclick="nlpSet('Beneficiaries without Aadhaar number')">Missing Aadhaar</button>
+      <button class="nlp-chip" onclick="nlpSet('Widow beneficiaries by taluka')">Widows by taluka</button>
+      <button class="nlp-chip" onclick="nlpSet('New beneficiaries registered in the last 6 months by category')">New registrations (6m)</button>
+      <button class="nlp-chip" onclick="nlpSet('Category-wise average age of beneficiaries')">Avg age by category</button>
+      <button class="nlp-chip" onclick="nlpSet('Deceased beneficiaries count by category and district')">Deceased by category & district</button>
+      <button class="nlp-chip" onclick="nlpSet('Category-wise male vs female count')">Male vs Female by category</button>
+      <button class="nlp-chip" onclick="nlpSet('Total disbursement amount this fiscal year')">Total FY disbursement</button>
+      <button class="nlp-chip" onclick="nlpSet('Category-wise monthly payout amount')">Category-wise payout</button>
+      <button class="nlp-chip" onclick="nlpSet('District-wise total payment disbursement last year')">District-wise disbursement</button>
+      <button class="nlp-chip" onclick="nlpSet('Payment failure rate by month for last 12 months')">Monthly failure rate</button>
+      <button class="nlp-chip" onclick="nlpSet('Pending payments count and amount this month')">Pending payments</button>
+      <button class="nlp-chip" onclick="nlpSet('Average payment amount per beneficiary by category')">Avg payment per beneficiary</button>
+      <button class="nlp-chip" onclick="nlpSet('Year-on-year payment growth percentage')">YoY payment growth</button>
+      <button class="nlp-chip" onclick="nlpSet('Failed payments by district')">Failed payments by district</button>
+      <button class="nlp-chip" onclick="nlpSet('Payment batch summary last 6 months')">Batch summary (6m)</button>
+      <button class="nlp-chip" onclick="nlpSet('Life certificate compliance rate by year')">Life cert compliance</button>
+      <button class="nlp-chip" onclick="nlpSet('Late life certificate submissions by taluka')">Late submissions by taluka</button>
+      <button class="nlp-chip" onclick="nlpSet('Taluka-wise active beneficiaries in South Goa')">South Goa talukas</button>
+      <button class="nlp-chip" onclick="nlpSet('Compare North Goa vs South Goa beneficiary count and payout')">North vs South Goa</button>
+      <button class="nlp-chip" onclick="nlpSet('Taluka-wise payment failure rate')">Taluka failure rates</button>
+      <button class="nlp-chip" onclick="nlpSet('District-wise category breakdown')">District x Category</button>
+      <button class="nlp-chip" onclick="nlpSet('Quarter-wise total disbursement comparison')">Quarterly disbursement</button>
+      <button class="nlp-chip" onclick="nlpSet('Month-wise new registrations vs exits')">Registrations vs exits</button>
+      <button class="nlp-chip" onclick="nlpSet('Deceased beneficiaries still receiving payments')">Deceased still paid</button>
+      <button class="nlp-chip" onclick="nlpSet('Fiscal year-wise budget utilization trend')">Budget utilization</button>
+      <button class="nlp-chip" onclick="nlpSet('Category-wise growth rate of beneficiaries over last 3 years')">Category growth rate</button>
+      <button class="nlp-chip" onclick="nlpSet('Ratio of male vs female beneficiaries by category')">Gender ratio by category</button>
+      <button class="nlp-chip" onclick="nlpSet('Fiscal year-wise total beneficiaries added vs removed')">FY additions vs removals</button>
     </div>
 
     <!-- Status + answer -->
@@ -1047,6 +1077,7 @@ function nlpSet(text) {
   if (inp) { inp.value = text; inp.focus(); }
   nlpQuery();
 }
+
 
 async function nlpQuery() {
   const inp = document.getElementById('nlpInp');

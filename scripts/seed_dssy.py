@@ -156,15 +156,16 @@ def _reg_date() -> date:
         return date(y, 1, 1)
 
 
-def _aadhaar(used: set) -> str | None:
-    if random.random() < 0.02:  # 2% missing
-        return None
-    for _ in range(20):
+def _aadhaar(used: set) -> str:
+    for _ in range(50):
         a = str(random.randint(2, 9)) + str(random.randint(10_000_000_000, 99_999_999_999))[:11]
         if a not in used:
             used.add(a)
             return a
-    return None
+    # Fallback: guaranteed unique
+    a = str(random.randint(2, 9)) + str(len(used)).zfill(11)
+    used.add(a)
+    return a
 
 
 def _fiscal(d: date) -> int:

@@ -53,8 +53,9 @@ ANTI-HALLUCINATION RULES:
   2. NEVER confuse "Disabled 90%+" with "Disabled Adult" — they are different category_codes.
   3. When asked "which category is lowest", run ORDER BY count ASC — the first row is the answer.
      The answer is Disabled 90%+ (~4,230), NOT Senior Citizen.
-  4. "Last 3 years payments" → query payment_summary table (NOT payments table).
-     Use: SELECT payment_year, SUM(total_net_amount) AS total_paid FROM payment_summary WHERE payment_year >= EXTRACT(YEAR FROM CURRENT_DATE)::INT - 2 GROUP BY payment_year ORDER BY payment_year
+  4. "Last 3 years payments" or "compare payments" → query payment_summary table (NOT payments table).
+     ALWAYS include: total_beneficiaries, paid_count, pending_count, failed_count, total_paid, success_rate_pct
+     Use: SELECT ps.payment_year AS year, SUM(ps.total_beneficiaries) AS total_beneficiaries, SUM(ps.paid_count) AS paid_count, SUM(ps.pending_count) AS pending_count, SUM(ps.failed_count) AS failed_count, SUM(ps.total_net_amount) AS total_paid, ROUND(SUM(ps.paid_count)*100.0/NULLIF(SUM(ps.total_beneficiaries),0),2) AS success_rate_pct FROM payment_summary ps WHERE ps.payment_year >= EXTRACT(YEAR FROM CURRENT_DATE)::INT - 2 GROUP BY ps.payment_year ORDER BY ps.payment_year
      NEVER make up totals or hardcode amounts.
   5. Payment year filter: use the year column on payment_summary directly (it is pre-computed).
      Do NOT use EXTRACT(YEAR FROM payment_date) when year/payment_year column exists.
@@ -397,11 +398,8 @@ SQL: SELECT c.category_name AS category, COUNT(*) AS count FROM beneficiaries b 
 Q: disabled 90 percent beneficiaries / disabled 90+ count
 SQL: SELECT c.category_name AS category, COUNT(*) AS count FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE b.status='Active' AND LOWER(c.category_name) LIKE '%disabled%90%' GROUP BY c.category_name ORDER BY count DESC;
 
-Q: year wise payment comparison / compare payments last 3 years / payment trend by year
-SQL: SELECT EXTRACT(YEAR FROM p.payment_date)::INT AS year, COUNT(DISTINCT p.beneficiary_id) AS beneficiaries_paid, SUM(p.amount) AS total_amount, COUNT(*) AS payment_count FROM payments p WHERE p.status = 'Paid' GROUP BY year ORDER BY year;
-
-Q: compare payments 2023 vs 2024 vs 2025 / last 3 years payment comparison
-SQL: SELECT ps.payment_year, SUM(ps.total_net_amount) AS total_paid, SUM(ps.paid_count) AS paid_count, SUM(ps.failed_count) AS failed_count FROM payment_summary ps WHERE ps.payment_year IN (2023, 2024, 2025) GROUP BY ps.payment_year ORDER BY ps.payment_year;
+Q: year wise payment comparison / compare payments last 3 years / payment trend by year / compare payments 2023 vs 2024 vs 2025 / last 3 years payment comparison
+SQL: SELECT ps.payment_year AS year, SUM(ps.total_beneficiaries) AS total_beneficiaries, SUM(ps.paid_count) AS paid_count, SUM(ps.pending_count) AS pending_count, SUM(ps.failed_count) AS failed_count, SUM(ps.total_base_amount) AS total_expected, SUM(ps.total_net_amount) AS total_paid, ROUND(SUM(ps.paid_count) * 100.0 / NULLIF(SUM(ps.total_beneficiaries), 0), 2) AS success_rate_pct FROM payment_summary ps WHERE ps.payment_year >= EXTRACT(YEAR FROM CURRENT_DATE)::INT - 2 GROUP BY ps.payment_year ORDER BY ps.payment_year;
 
 Q: year wise registration trend / registrations by year
 SQL: SELECT EXTRACT(YEAR FROM b.registration_date)::INT AS year, COUNT(*) AS registrations FROM beneficiaries b GROUP BY year ORDER BY year;
@@ -413,13 +411,13 @@ Q: year wise active beneficiary registrations by category
 SQL: SELECT EXTRACT(YEAR FROM b.registration_date)::INT AS year, c.category_name AS category, COUNT(*) AS count FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE b.status='Active' GROUP BY year, category ORDER BY year, count DESC;
 
 Q: last 3 years payment summary / payment comparison across years / compare payout last 3 years
-SQL: SELECT ps.payment_year, SUM(ps.total_net_amount) AS total_paid, SUM(ps.paid_count) AS paid_count, SUM(ps.pending_count) AS pending_count, SUM(ps.failed_count) AS failed_count FROM payment_summary ps WHERE ps.payment_year >= EXTRACT(YEAR FROM CURRENT_DATE)::INT - 2 GROUP BY ps.payment_year ORDER BY ps.payment_year;
+SQL: SELECT ps.payment_year AS year, SUM(ps.total_beneficiaries) AS total_beneficiaries, SUM(ps.paid_count) AS paid_count, SUM(ps.pending_count) AS pending_count, SUM(ps.failed_count) AS failed_count, SUM(ps.total_base_amount) AS total_expected, SUM(ps.total_net_amount) AS total_paid, ROUND(SUM(ps.paid_count) * 100.0 / NULLIF(SUM(ps.total_beneficiaries), 0), 2) AS success_rate_pct FROM payment_summary ps WHERE ps.payment_year >= EXTRACT(YEAR FROM CURRENT_DATE)::INT - 2 GROUP BY ps.payment_year ORDER BY ps.payment_year;
 
 Q: last 3 years total payout amount
-SQL: SELECT ps.payment_year, SUM(ps.total_net_amount) AS total_annual_payout FROM payment_summary ps WHERE ps.payment_year >= EXTRACT(YEAR FROM CURRENT_DATE)::INT - 2 GROUP BY ps.payment_year ORDER BY ps.payment_year;
+SQL: SELECT ps.payment_year AS year, SUM(ps.total_net_amount) AS total_annual_payout, SUM(ps.total_beneficiaries) AS beneficiaries_covered FROM payment_summary ps WHERE ps.payment_year >= EXTRACT(YEAR FROM CURRENT_DATE)::INT - 2 GROUP BY ps.payment_year ORDER BY ps.payment_year;
 
 Q: year wise payment growth / payment trend by year / yearly payout comparison
-SQL: SELECT ps.payment_year, SUM(ps.total_net_amount) AS total_paid, SUM(ps.paid_count) AS beneficiaries_paid, SUM(ps.failed_count) AS failed_count FROM payment_summary ps GROUP BY ps.payment_year ORDER BY ps.payment_year;
+SQL: SELECT ps.payment_year AS year, SUM(ps.total_beneficiaries) AS total_beneficiaries, SUM(ps.paid_count) AS paid_count, SUM(ps.failed_count) AS failed_count, SUM(ps.total_net_amount) AS total_paid, ROUND(SUM(ps.paid_count) * 100.0 / NULLIF(SUM(ps.total_beneficiaries), 0), 2) AS success_rate_pct FROM payment_summary ps GROUP BY ps.payment_year ORDER BY ps.payment_year;
 
 Q: district wise payment comparison by year
 SQL: SELECT d.district_name AS district, ps.payment_year, SUM(ps.total_net_amount) AS total_paid, SUM(ps.paid_count) AS paid_count FROM payment_summary ps JOIN districts d ON ps.district_id = d.district_id WHERE ps.payment_year >= EXTRACT(YEAR FROM CURRENT_DATE)::INT - 2 GROUP BY d.district_name, ps.payment_year ORDER BY d.district_name, ps.payment_year;
@@ -648,12 +646,14 @@ EXAMPLES:
 - For cross-tab/breakdown questions GROUP BY both dimensions
 - For year extraction use EXTRACT(YEAR FROM column)::INT
 - For date formatting use TO_CHAR(DATE_TRUNC('month', col), 'YYYY-MM')
-- "Last 3 years payments" or "payout comparison" → ALWAYS use payment_summary table (NOT payments table):
-    SELECT payment_year, SUM(total_net_amount) AS total_paid, SUM(paid_count) AS paid_count,
-           SUM(failed_count) AS failed_count
-    FROM payment_summary
-    WHERE payment_year >= EXTRACT(YEAR FROM CURRENT_DATE)::INT - 2
-    GROUP BY payment_year ORDER BY payment_year;
+- "Last 3 years payments" or "payout comparison" or "compare payments" → ALWAYS use payment_summary table (NOT payments table):
+    SELECT ps.payment_year AS year, SUM(ps.total_beneficiaries) AS total_beneficiaries,
+           SUM(ps.paid_count) AS paid_count, SUM(ps.pending_count) AS pending_count,
+           SUM(ps.failed_count) AS failed_count, SUM(ps.total_net_amount) AS total_paid,
+           ROUND(SUM(ps.paid_count)*100.0/NULLIF(SUM(ps.total_beneficiaries),0),2) AS success_rate_pct
+    FROM payment_summary ps
+    WHERE ps.payment_year >= EXTRACT(YEAR FROM CURRENT_DATE)::INT - 2
+    GROUP BY ps.payment_year ORDER BY ps.payment_year;
 - "Year-over-year payments" → same pattern with payment_summary GROUP BY payment_year
 - The payments table has only ~35k records (last 6 months). For historical/yearly data use payment_summary (1,680 rows, 6 years)
 - For batch-level data (monthly ECS batches) use payment_batches table
