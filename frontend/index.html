@@ -613,6 +613,28 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
     </div>
   </div>
 
+  <!-- Google-style Mic Overlay for AI Query -->
+  <div class="mic-overlay" id="chatMicOverlay">
+    <div class="mic-orb" onclick="stopMic()">
+      <div class="mic-ring"></div>
+      <div class="mic-ring"></div>
+      <div class="mic-ring"></div>
+      <div class="mic-orb-core">
+        <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+          <line x1="12" y1="19" x2="12" y2="23"/>
+          <line x1="8" y1="23" x2="16" y2="23"/>
+        </svg>
+      </div>
+    </div>
+    <div class="mic-overlay-label" id="chatMicLabel">
+      Listening…
+      <div class="mic-overlay-sub">Tap the mic or press Esc to stop</div>
+    </div>
+    <button class="mic-overlay-cancel" onclick="cancelChatMic()">Cancel</button>
+  </div>
+
   <!-- BENEFICIARIES -->
   <div class="view" id="v-bens">
     <div class="tc">
@@ -677,7 +699,7 @@ function setLang(lang, btn) {
   qs('#qinp').placeholder = LANG_PLACEHOLDER[lang] || LANG_PLACEHOLDER.en;
 }
 
-// ── VOICE / MIC (Gemini audio transcription) ─────────────────────────────────
+// ── VOICE / MIC (Gemini audio transcription — Google-style overlay) ──────────
 let mediaRecorder = null, audioChunks = [], isRecording = false;
 
 function toggleMic() {
@@ -699,24 +721,42 @@ async function startMic() {
     mediaRecorder.start();
     isRecording = true;
     qs('#micBtn').classList.add('recording');
-    showMicStatus('Listening… click mic to stop', true);
+    const ov = document.getElementById('chatMicOverlay');
+    ov.classList.add('open');
+    ov.classList.remove('processing');
+    document.getElementById('chatMicLabel').innerHTML = 'Listening…<div class="mic-overlay-sub">Tap the mic or press Esc to stop</div>';
   } catch(e) {
-    showMicStatus('Microphone permission denied.', false);
+    alert('Microphone permission denied. Please allow microphone access.');
   }
 }
 
 function stopMic() {
+  if (!isRecording) return;
+  isRecording = false;
+  qs('#micBtn').classList.remove('recording');
+  const ov = document.getElementById('chatMicOverlay');
+  ov.classList.add('processing');
+  document.getElementById('chatMicLabel').innerHTML = 'Processing…<div class="mic-overlay-sub">Transcribing your voice</div>';
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+}
+
+function cancelChatMic() {
   isRecording = false;
   qs('#micBtn').classList.remove('recording');
   if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-    showMicStatus('Processing…', true);
+    mediaRecorder.ondataavailable = null;
+    mediaRecorder.onstop = () => { mediaRecorder.stream.getTracks().forEach(t => t.stop()); };
     mediaRecorder.stop();
   }
+  document.getElementById('chatMicOverlay').classList.remove('open', 'processing');
 }
 
 async function sendAudioToGemini(blob) {
+  const ov = document.getElementById('chatMicOverlay');
+  const lbl = document.getElementById('chatMicLabel');
   if (blob.size > 5 * 1024 * 1024) {
-    showMicStatus('Recording too long. Keep under ~2 minutes.', false);
+    lbl.innerHTML = 'Recording too long<div class="mic-overlay-sub">Please keep it under 2 minutes</div>';
+    setTimeout(() => ov.classList.remove('open', 'processing'), 1800);
     return;
   }
   try {
@@ -725,24 +765,20 @@ async function sendAudioToGemini(blob) {
     form.append('language', LANG_SPEECH[curLang] || 'en-IN');
     const res  = await fetch(`${BASE}/api/query/transcribe`, { method: 'POST', body: form });
     const data = await res.json();
+    ov.classList.remove('open', 'processing');
     if (data.transcript) {
       qs('#qinp').value = data.transcript;
       qs('#qinp').style.height = 'auto';
       qs('#qinp').style.height = Math.min(qs('#qinp').scrollHeight, 110) + 'px';
-      showMicStatus('Voice captured — press send', false);
+      qs('#qinp').focus();
     } else {
-      showMicStatus('Could not transcribe. Try again.', false);
+      lbl.innerHTML = 'Could not transcribe<div class="mic-overlay-sub">Please try again</div>';
+      setTimeout(() => ov.classList.remove('open', 'processing'), 1500);
     }
   } catch(e) {
-    showMicStatus('Transcription failed. Try again.', false);
+    lbl.innerHTML = 'Transcription failed<div class="mic-overlay-sub">Please try again</div>';
+    setTimeout(() => ov.classList.remove('open', 'processing'), 1500);
   }
-}
-
-function showMicStatus(msg, active) {
-  const el = qs('#micStatus');
-  el.textContent = msg;
-  el.className = 'mic-status' + (active ? ' active' : '');
-  if (!active && msg) setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 3000);
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
@@ -1523,10 +1559,11 @@ async function _dynTranscribe(blob) {
   }
 }
 
-// Esc key to cancel overlay
+// Esc key to cancel overlays
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && document.getElementById('dynMicOverlay').classList.contains('open')) {
-    dynMicCancel();
+  if (e.key === 'Escape') {
+    if (document.getElementById('chatMicOverlay').classList.contains('open')) cancelChatMic();
+    if (document.getElementById('dynMicOverlay').classList.contains('open')) dynMicCancel();
   }
 });
 </script>
