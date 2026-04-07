@@ -27,7 +27,9 @@ from backend.services.prompt_assembler import (
     build_sql_prompt,
     build_nl_answer_prompt,
     build_rag_answer_prompt,
+    build_reason_prompt,
     is_followup,
+    is_reason_question,
 )
 from backend.services.context_store import ConversationTurn
 
@@ -63,15 +65,51 @@ async def resolve_question(question: str, context: list[ConversationTurn]) -> st
 # ── Intent Classification ─────────────────────────────────────────────────────
 
 async def classify_intent(question: str, context: list[ConversationTurn] = None) -> str:
-    """Classify question as SQL or RAG using Gemini with zero temperature."""
+    """
+    Classify question as SQL, RAG, or REASON using Gemini with zero temperature.
+
+    Fast-path: if the local heuristic `is_reason_question` is confident the
+    question is reasoning over prior data, skip the API call entirely.
+    """
+    # Cheap local short-circuit — saves an API call when it's obvious.
+    if is_reason_question(question, context or []):
+        return "REASON"
+
     prompt = build_intent_prompt(question, context)
     try:
         r = await ai_call(prompt, temperature=0.0, max_tokens=8)
         i = r.strip().upper().split()[0] if r.strip() else "SQL"
-        return i if i in ("SQL", "RAG") else "SQL"
+        if i in ("SQL", "RAG", "REASON"):
+            # Guard: model may say REASON when there's no prior data — downgrade.
+            if i == "REASON":
+                analytical = [t for t in (context or []) if t.intent != "EDGE" and t.sql_data]
+                if not analytical:
+                    return "SQL"
+            return i
+        return "SQL"
     except Exception as e:
         logger.warning("Intent classification failed, defaulting to SQL: %s", e)
         return "SQL"
+
+
+async def answer_from_context(
+    question: str,
+    context: list[ConversationTurn],
+    language: str = "en",
+) -> str:
+    """
+    Answer the user's question by REASONING over data already in conversation
+    history. No SQL, no RAG, no web search. Used for "why is X the lowest?",
+    "explain that", "summarize the trend", "which one is the highest among
+    these?" — questions that should NOT trigger a fresh data fetch.
+    """
+    prompt = build_reason_prompt(question, context, language)
+    try:
+        return await ai_call(prompt, temperature=0.2, max_tokens=512)
+    except Exception as e:
+        logger.warning("answer_from_context failed: %s", e)
+        # Graceful degradation — let the caller fall back to SQL if it wants.
+        raise
 
 
 # ── SQL Generation (NL-to-SQL Engine) ────────────────────────────────────────

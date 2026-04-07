@@ -441,77 +441,245 @@ SQL: SELECT fiscal_year, fiscal_year_label, quarter, quarter_label, period_start
 """
 
 # ── Follow-up signal detection (heuristic, no API call) ───────────────────────
+#
+# Three layers of signals, scored together. The goal is to know:
+#   (a) Is this a follow-up at all? → is_followup()
+#   (b) Can it be answered from prior data without fetching new SQL? → is_reason_question()
+#
+# Both functions are pure-Python heuristics. They are intentionally
+# conservative — when unsure, return True for is_followup (cheap) and False
+# for is_reason_question (so we still fetch fresh data when in doubt).
 
-# Signals that strongly indicate a follow-up / reference to prior context
-_FOLLOWUP_SIGNALS = frozenset([
-    'what about', 'how about', 'same for', 'and the', 'and what',
-    'now show', 'now what', 'also', 'as well',
-    'sum of', 'total of', 'combine', 'add both', 'add them',
-    'both of', 'all three', 'all of them',
-    'similarly', 'compare with', 'versus', ' vs ', 'difference between',
-    'for that', 'of that', 'in that case', 'then what', 'and inactive',
-    'and active', 'and deceased', 'and female', 'and male',
-    'that one', 'those', ' it ', 'its ', 'their ', 'them',
-    'compare to all', 'all years', 'which year', 'year wise', 'year-wise',
-    'this category', 'that category', 'the lowest', 'the highest',
-    'has the lowest', 'has the highest', 'and why',
+# Pronouns / deictic references — almost always need prior context to resolve.
+_REFERENTIAL = frozenset([
+    ' it ', " it's", ' its ', ' that ', ' this ', ' those ', ' these ',
+    ' them ', ' their ', ' there ', ' such ', ' same ',
+    'that one', 'this one', 'the same', 'the previous', 'the above',
 ])
+
+# Continuation phrases — user is extending the prior turn.
+_CONTINUATION = frozenset([
+    'what about', 'how about', 'same for', 'and the', 'and what', 'and how',
+    'now show', 'now what', 'also show', 'as well', 'and also',
+    'and inactive', 'and active', 'and deceased', 'and female', 'and male',
+    'and north', 'and south', 'and widow', 'and senior',
+])
+
+# Aggregation across prior turns — needs prior numbers, not new SQL.
+_AGGREGATION = frozenset([
+    'sum of', 'total of', 'combine', 'add both', 'add them', 'add up',
+    'both of', 'all three', 'all of them', 'altogether',
+])
+
+# Reasoning / explanation — answerable from prior data alone.
+_REASONING = frozenset([
+    'why ', 'why?', 'why is', 'why are', 'why does', 'why did', 'why has',
+    'explain', 'explanation', 'reason for', 'what caused', 'how come',
+    'what does this mean', 'what does that mean', 'interpret',
+    'summarize', 'summarise', 'summary',
+    'tell me more', 'elaborate', 'in short', 'in summary',
+])
+
+# Reflective comparison/ranking against PRIOR data shown.
+_REFLECTIVE = frozenset([
+    'which is the highest', 'which is the lowest',
+    'which one is highest', 'which one is lowest',
+    'which is bigger', 'which is smaller', 'which has more', 'which has less',
+    'which is better', 'which is worse',
+    'what is the highest', 'what is the lowest',
+    'biggest', 'smallest', 'difference between',
+    'top one', 'bottom one', 'best one', 'worst one',
+])
+
+# Topic markers that pin a question to a specific data domain. If a follow-up
+# introduces a topic that doesn't appear in any recent context, it's a fresh
+# question and should NOT inherit prior filters.
+_TOPIC_TERMS = {
+    'beneficiary', 'beneficiaries', 'beneficiar',
+    'category', 'categories', 'widow', 'senior', 'disabled', 'hiv',
+    'single woman', 'leprosy', 'cancer', 'kidney', 'sickle',
+    'district', 'goa', 'taluka', 'village', 'pincode',
+    'payment', 'payout', 'paid', 'pending', 'failed', 'batch',
+    'life certificate', 'enrollment', 'enrolment',
+    'gender', 'male', 'female', 'age',
+    'active', 'inactive', 'deceased',
+    'year', 'month', 'fiscal', 'quarter',
+    'eligibility', 'apply', 'application', 'document', 'documents',
+}
+
+
+def _norm(text: str) -> str:
+    """Normalize text for matching: lowercase, padded with spaces, collapsed."""
+    return f" {text.lower().strip()} "
 
 
 def is_followup(question: str, context: list[ConversationTurn]) -> bool:
     """
-    Determines if a question needs context-aware resolution before routing.
-    Leans towards True when there IS prior context — the resolver is cheap
-    (one fast Gemini call) and wrong routing is expensive (wrong answer).
+    Decide if a question needs context-aware resolution.
+
+    Strategy: any one strong signal → True. Otherwise check shared topic with
+    the last analytical turn — if the new question is short AND shares topic
+    terms with prior context, it's a follow-up.
+
+    Errs toward True when context exists and the question is short, because
+    the resolver is cheap and a wrong fresh-route loses the user's intent.
     """
     if not context:
         return False
-    # Only consider non-EDGE turns as valid prior context
     analytical = [t for t in context if t.intent != "EDGE"]
     if not analytical:
         return False
-    q = question.lower().strip()
-    # Very short questions (≤8 words) with context almost always need resolution
-    if len(q.split()) <= 8:
+
+    q = _norm(question)
+    n_words = len(q.split())
+
+    # Strong signals — always a follow-up.
+    if any(sig in q for sig in _REFERENTIAL):    return True
+    if any(sig in q for sig in _CONTINUATION):   return True
+    if any(sig in q for sig in _AGGREGATION):    return True
+    if any(sig in q for sig in _REASONING):      return True
+    if any(sig in q for sig in _REFLECTIVE):     return True
+
+    # Topic-shift check: if the question mentions a topic NOT present in any
+    # recent turn AND is long enough to stand alone, treat as fresh.
+    q_topics  = {t for t in _TOPIC_TERMS if t in q}
+    ctx_blob  = " ".join(_norm(t.resolved_question) for t in analytical[-3:])
+    ctx_topics = {t for t in _TOPIC_TERMS if t in ctx_blob}
+
+    shared_topics = q_topics & ctx_topics
+    new_topics    = q_topics - ctx_topics
+
+    # Long, self-contained, with new topics and no shared ones → fresh.
+    if n_words >= 6 and new_topics and not shared_topics:
+        return False
+
+    # Short questions (≤7 words) with prior context → almost always follow-up.
+    if n_words <= 7:
         return True
-    # Explicit follow-up signals
-    if any(sig in q for sig in _FOLLOWUP_SIGNALS):
+
+    # Medium-length question that shares topics with prior context → follow-up.
+    if shared_topics:
         return True
-    # If the question mentions subjects from recent context, it's likely a follow-up
-    last = analytical[-1]
-    last_q = last.resolved_question.lower()
-    # Check for shared nouns (category names, district names, etc.)
-    key_terms = {'disabled', 'widow', 'senior', 'hiv', 'single woman',
-                 'north goa', 'south goa', 'active', 'inactive', 'deceased',
-                 'category', 'district', 'taluka', 'payment', 'payout'}
-    q_terms = {t for t in key_terms if t in q}
-    ctx_terms = {t for t in key_terms if t in last_q}
-    if q_terms & ctx_terms:  # shared terms = likely continuation
+
+    return False
+
+
+def is_reason_question(question: str, context: list[ConversationTurn]) -> bool:
+    """
+    Decide if a question can be answered purely by REASONING over prior data,
+    without fetching new SQL or RAG. This is the natural-conversation path.
+
+    Returns True when:
+      - Prior context exists AND has sql_data to reason about, AND
+      - The question is reasoning/reflective (why, explain, which is highest,
+        what does this mean, etc.)
+
+    Conservative on purpose: when unsure, return False so we fall back to SQL.
+    """
+    if not context:
+        return False
+    analytical = [t for t in context if t.intent != "EDGE"]
+    if not analytical:
+        return False
+
+    # Need at least one prior turn with actual data rows to reason about.
+    has_data = any(t.sql_data for t in analytical)
+    if not has_data:
+        return False
+
+    q = _norm(question)
+
+    # "why / explain / interpret / summarize" — clearly reasoning.
+    if any(sig in q for sig in _REASONING):
         return True
+
+    # "which is highest/lowest/bigger" — reflective comparison over prior data.
+    # But only if we don't have new topic terms the prior data wouldn't cover.
+    if any(sig in q for sig in _REFLECTIVE):
+        q_topics  = {t for t in _TOPIC_TERMS if t in q}
+        ctx_blob  = " ".join(_norm(t.resolved_question) for t in analytical[-3:])
+        ctx_topics = {t for t in _TOPIC_TERMS if t in ctx_blob}
+        if not (q_topics - ctx_topics):
+            return True
+
     return False
 
 
 # ── Internal context formatter ─────────────────────────────────────────────────
 
-def _fmt_context(context: list[ConversationTurn]) -> str:
+def _row_headline(rows: list, max_rows: int = 6) -> str:
     """
-    Render conversation history into a compact block for injection into prompts.
-    Includes raw sql_data when available so the model can reference actual numbers.
-    EDGE turns (greetings, thanks, etc.) are excluded — they carry no analytical
-    content and would confuse the question resolver and SQL generator.
+    Compress a list of dict rows into a short, human-readable preview that
+    keeps the headline numbers a model needs to reason about ("North Goa = 1.9M
+    in 2025, 0.49M in 2026") without dumping verbose JSON into every prompt.
+    """
+    if not rows:
+        return ""
+    rows = rows[:max_rows]
+    cols = list(rows[0].keys())
+    # Find one label column (text) and one numeric column (the headline metric)
+    def _is_num(v):
+        try: float(str(v)); return True
+        except (ValueError, TypeError): return False
+    num_cols = [c for c in cols if all(_is_num(r.get(c)) for r in rows if r.get(c) is not None)]
+    lbl_cols = [c for c in cols if c not in num_cols]
+    if not num_cols:
+        # No numeric column → just stringify each row briefly
+        return "; ".join(", ".join(f"{k}={v}" for k, v in r.items()) for r in rows)
+    metric = num_cols[0]
+    parts = []
+    for r in rows:
+        label_bits = " | ".join(str(r.get(c, "")) for c in lbl_cols) or "row"
+        parts.append(f"{label_bits} → {metric}={r.get(metric)}")
+    return "; ".join(parts)
+
+
+def _fmt_context(
+    context: list[ConversationTurn],
+    *,
+    mode: str = "compact",
+    max_turns: int = 4,
+) -> str:
+    """
+    Render conversation history for injection into prompts.
+
+    mode="compact"  — question + 1-line answer + headline numbers (default).
+                      Used by SQL/intent/resolver prompts. Keeps tokens low.
+    mode="full"     — question + full answer + full sql_data JSON.
+                      Used by the REASON prompt where the model must reason
+                      over actual rows.
+
+    EDGE turns (greetings, etc.) are excluded — they add noise.
+    Only the most recent `max_turns` analytical turns are included.
     """
     if not context:
         return ""
-    # Filter out EDGE turns — they add noise to SQL/RAG resolution
     analytical = [t for t in context if t.intent != "EDGE"]
     if not analytical:
         return ""
-    lines = ["CONVERSATION HISTORY (for context — use to resolve references and maintain continuity):"]
+    analytical = analytical[-max_turns:]
+
+    if mode == "full":
+        lines = ["CONVERSATION HISTORY (use the actual data rows below to answer the question):"]
+        for i, t in enumerate(analytical, 1):
+            lines.append(f"[{i}] User asked: {t.resolved_question}")
+            short_ans = (t.answer[:300] + "…") if len(t.answer) > 300 else t.answer
+            lines.append(f"     Answer given: {short_ans}")
+            if t.sql_data:
+                lines.append(f"     Data rows ({len(t.sql_data)}): {json.dumps(t.sql_data, default=str)}")
+        lines.append("")
+        return "\n".join(lines) + "\n"
+
+    # compact mode
+    lines = ["CONVERSATION HISTORY (recent turns — use to resolve references and maintain continuity):"]
     for i, t in enumerate(analytical, 1):
-        lines.append(f"[{i}] User asked: {t.resolved_question}")
-        lines.append(f"     Answer: {t.answer}")
+        lines.append(f"[{i}] Q: {t.resolved_question}")
+        short_ans = (t.answer[:200] + "…") if len(t.answer) > 200 else t.answer
+        lines.append(f"     A: {short_ans}")
         if t.sql_data:
-            lines.append(f"     Data retrieved: {json.dumps(t.sql_data, default=str)}")
+            headline = _row_headline(t.sql_data, max_rows=6)
+            if headline:
+                lines.append(f"     Key numbers: {headline}")
     lines.append("")
     return "\n".join(lines) + "\n"
 
@@ -520,56 +688,65 @@ def _fmt_context(context: list[ConversationTurn]) -> str:
 
 def build_question_resolver_prompt(question: str, context: list[ConversationTurn]) -> str:
     """
-    Prompt to rewrite a follow-up question into a complete standalone question.
-    This is the core of the multi-turn chain — called BEFORE intent classification.
+    Rewrite a follow-up into a complete, standalone question while PRESERVING
+    the user's meta-intent. The output is just the rewritten question — the
+    caller decides how to route it (REASON / SQL / RAG) using is_reason_question.
 
-    Examples handled:
-      "what about inactive?"            → "How many inactive beneficiaries are there?"
-      "sum of active and inactive?"     → "What is the combined total of active and inactive beneficiaries?"
-      "which is the highest?"           → "Which district/category has the highest beneficiary count?"
-      "show females only"               → "Show female beneficiary count district-wise" (from prior district context)
-      "what about North Goa?"           → "How many active beneficiaries are in North Goa?" (from prior breakdown)
+    Key principle: do NOT strip "why", "explain", "which is highest", etc.
+    Those words tell us how the user wants the answer shaped — losing them
+    is exactly what makes multi-turn feel robotic.
     """
-    # Filter out EDGE turns — they carry no analytical context for follow-up resolution
-    analytical = [t for t in context if t.intent != "EDGE"]
-    ctx_lines = []
-    for i, t in enumerate(analytical, 1):
-        ctx_lines.append(f"[{i}] User asked: {t.resolved_question}")
-        ctx_lines.append(f"     System answered: {t.answer}")
-        if t.sql_data:
-            ctx_lines.append(f"     Actual data returned: {json.dumps(t.sql_data, default=str)}")
-    ctx_block = "\n".join(ctx_lines)
+    ctx_block = _fmt_context(context, mode="compact", max_turns=4).rstrip()
 
-    return f"""You are a query resolver for the DSSY (Dayanand Social Security Scheme) analytics system.
+    return f"""You rewrite follow-up questions into complete, standalone questions for the DSSY analytics assistant.
 
-Your job: Rewrite the user's question into a COMPLETE, STANDALONE question using conversation history.
-The rewritten question must make sense on its own — someone reading it without the history should understand exactly what data is being asked for.
-
-CONVERSATION HISTORY:
 {ctx_block}
 
-CURRENT QUESTION: "{question}"
+CURRENT USER MESSAGE: "{question}"
 
-RULES:
-1. Replace pronouns/references ("it", "that", "this category", "those") with the actual subject from history
-2. Carry forward filters from context (district, category, status) unless the user explicitly changes them
-3. If the user asks to visualize/graph/chart the SAME data from prior context, rewrite as the data query (e.g., "draw a graph" → repeat the prior data question)
-4. If the user asks "why" about a data pattern, keep it as a data question — add the relevant breakdown/comparison so the SQL can provide the answer through data
-5. If the user is confirming/correcting prior results ("X has the lowest right?"), rewrite as a comparative query that can verify the claim
-6. If already self-contained, return unchanged
-7. IMPORTANT: Preserve the user's analytical intent — if they want comparison, trend, breakdown, ranking, keep that in the rewrite
+YOUR JOB:
+Rewrite the current message into ONE complete, standalone question that makes sense without the history,
+while keeping the user's tone and meta-intent intact.
+
+PRESERVE THE USER'S INTENT WORDS:
+- Keep "why", "explain", "summarize", "what does this mean" if the user used them — these tell us they want
+  reasoning over the prior data, NOT a fresh data fetch.
+- Keep "which is highest/lowest/biggest", "compare", "difference between" — they want a reflective comparison.
+- Keep "show", "list", "give me", "draw a chart" — they want fresh data or a visualization.
+
+RESOLUTION RULES:
+1. Replace pronouns ("it", "that", "this", "those", "them") with the concrete subject from history.
+2. Carry forward filters (district, category, status, year) UNLESS the user changes them.
+3. If the user introduces a brand-new topic that doesn't appear in history, do NOT bolt prior filters on.
+4. If the message is already standalone, return it unchanged.
+5. Output ONLY the rewritten question. No quotes, no prefix, no explanation.
 
 EXAMPLES:
-"what about inactive?" (after active count) → "How many inactive beneficiaries are there?"
-"sum of both?" (after active + inactive) → "What is the combined total of active and inactive beneficiaries?"
-"which is highest?" (after district breakdown) → "Which district has the highest number of active beneficiaries?"
-"draw a graph" (after category-wise count) → "Show category-wise active beneficiary count"
-"compare to all years which year got disabled 90% lowest and why?" → "Show year-wise total beneficiaries count for Disabled 90% category ordered by count ascending"
-"disabled 80% has the lowest right?" (after showing Disabled 90% was lowest) → "Show all categories with their active beneficiary count ordered by count ascending"
-"show trend for this" (after Disabled 90% data) → "Show year-wise Disabled 90% beneficiary count trend"
-"what about South Goa?" (after North Goa widow count) → "How many widow beneficiaries are there in South Goa?"
+History: "active beneficiaries by category" answered with category counts.
+"what about inactive?"  →  "How many inactive beneficiaries are there by category?"
 
-Output ONLY the rewritten question — no explanation, no prefix, no quotes.
+History: shows north/south goa beneficiary totals by year (2024–2026).
+"why 2026 has lowest beneficiaries?"  →  "Why is the 2026 beneficiary count the lowest in the data shown?"
+   (KEEP "why" — this is a reasoning question, not a SQL fetch.)
+
+History: shows disabled 90% had lowest active count.
+"and why?"  →  "Why does Disabled 90% have the lowest active beneficiary count?"
+
+History: gender breakdown by category.
+"which one is highest?"  →  "Which category-gender combination has the highest count in the prior breakdown?"
+
+History: north goa widow count.
+"what about south goa?"  →  "How many widow beneficiaries are there in South Goa?"
+
+History: senior citizen count (active).
+"draw a chart"  →  "Show senior citizen active beneficiary count for charting."
+
+History: payment trend last 3 years.
+"explain that"  →  "Explain the payment trend over the last 3 years shown above."
+
+History: category breakdown.
+"show me payment status for last 6 months"
+   →  "Show payment status counts for the last 6 months."   (NEW topic — no inheritance.)
 
 REWRITTEN QUESTION:"""
 
@@ -577,37 +754,115 @@ REWRITTEN QUESTION:"""
 # ── Intent Classification ─────────────────────────────────────────────────────
 
 def build_intent_prompt(question: str, context: list[ConversationTurn] = None) -> str:
-    """Classify question as SQL or RAG, with conversation history for follow-up awareness."""
-    ctx = _fmt_context(context or [])
-    return f"""{ctx}Route this question to SQL or RAG for the DSSY (Dayanand Social Security Scheme) analytics system.
+    """
+    Classify a question into one of three intents: SQL, RAG, or REASON.
 
-SQL = query the LIVE DATABASE for numbers, counts, statistics, comparisons, breakdowns, trends, charts, lists.
-RAG = search SCHEME DOCUMENTS for rules, policies, eligibility criteria, procedures, history, official notifications.
+    SQL    — fetch fresh numbers from the database.
+    RAG    — answer from scheme documents (eligibility, rules, procedures).
+    REASON — answer purely by reasoning over data already in conversation history
+             (why, explain, summarize, which is highest among shown). No fetch.
 
-DECISION RULES (in priority order):
-1. If conversation history has SQL data AND this question continues that conversation (drill-down, comparison, chart, "why", confirmation) → SQL
-2. If the question asks for NUMBERS or STATISTICS about beneficiaries, payments, categories, districts → SQL
-3. If the question asks about RULES, ELIGIBILITY, PROCEDURES, POLICY, DOCUMENTS, or SCHEME HISTORY → RAG
-4. When in doubt, prefer SQL — the SQL generator can return CANNOT_ANSWER if it truly can't handle it.
+    REASON is only allowed when prior context contains analytical turns with data.
+    """
+    ctx = _fmt_context(context or [], mode="compact", max_turns=3)
+    has_prior_data = bool(context) and any(
+        t.intent != "EDGE" and t.sql_data for t in (context or [])
+    )
+    reason_hint = (
+        "REASON is AVAILABLE — prior turns have data rows you can reason about."
+        if has_prior_data else
+        "REASON is NOT AVAILABLE — there is no prior data to reason about. Choose SQL or RAG."
+    )
+
+    return f"""{ctx}Route this user message to ONE of: SQL, RAG, or REASON.
+{reason_hint}
+
+SQL    = run a fresh query against the LIVE DATABASE for numbers, counts, breakdowns, trends, lists, charts.
+RAG    = answer from SCHEME DOCUMENTS — eligibility rules, procedures, history, official notifications.
+REASON = answer using ONLY the prior conversation data shown above. No new fetch. Use this when the user is
+         asking to reason ABOUT what was already shown — "why", "explain", "summarize", "interpret",
+         "which one is highest among these", "what does that mean".
+
+DECISION ORDER:
+1. Reasoning verbs (why / explain / summarize / interpret / what does this mean / tell me more) over prior
+   data → REASON.
+2. Reflective comparison ("which is the highest?", "biggest one?", "compare those") that refers to data
+   already shown in history → REASON.
+3. Question about rules / eligibility / procedure / documents / policy → RAG.
+4. Anything asking for fresh numbers, breakdowns, charts, lists, trends → SQL.
+5. When in doubt between SQL and REASON, prefer SQL (fresh data is safer than stale).
+6. When in doubt between SQL and RAG, prefer SQL.
 
 EXAMPLES:
-"How many active beneficiaries?" → SQL
-"District-wise breakdown" → SQL
-"Category with lowest count" → SQL
-"Compare payments last 3 years" → SQL
-"draw a graph" → SQL
-"and why?" → SQL
-"Who is eligible for DSSY?" → RAG
-"What documents are needed?" → RAG
-"How to apply for DSSY?" → RAG
-"What is the difference between DSSY and DDSSY?" → RAG
-"What did the CAG audit find?" → RAG
-"Can a divorced woman apply?" → RAG
+"How many active beneficiaries?"                                       → SQL
+"District-wise breakdown"                                              → SQL
+"Compare payments last 3 years"                                        → SQL
+"Draw a chart of category counts"                                      → SQL
+"Show talukas in north goa"                                            → SQL
 
-Reply ONLY with SQL or RAG.
+(after a yearly trend is shown) "why is 2026 the lowest?"              → REASON
+(after a category breakdown)    "explain that"                         → REASON
+(after district counts shown)   "which district is the highest?"       → REASON
+(after seeing payment trend)    "summarize the trend"                  → REASON
+(after multiple categories)     "what does this tell us about widows?" → REASON
+
+"Who is eligible for DSSY?"                                            → RAG
+"What documents are needed for application?"                           → RAG
+"What is the difference between DSSY and DDSSY?"                       → RAG
+"How to apply?"                                                        → RAG
+
+Reply with EXACTLY one word: SQL, RAG, or REASON.
 
 Question: {question}
 Answer:"""
+
+
+# ── Reasoning over prior data (no fetch) ─────────────────────────────────────
+
+def build_reason_prompt(
+    question: str,
+    context: list[ConversationTurn],
+    language: str = "en",
+) -> str:
+    """
+    Build a prompt that asks Gemini to answer the user's question PURELY by
+    reasoning over data already present in conversation history. No SQL,
+    no RAG, no web search. Used for "why", "explain", "which is highest",
+    "summarize that", etc.
+    """
+    lang_name  = LANGS.get(language, "English")
+    lang_instr = f"Respond in {lang_name}." if language != "en" else ""
+    ctx        = _fmt_context(context or [], mode="full", max_turns=4)
+
+    return f"""You are the DSSY analytics assistant for the Government of Goa Department of Social Welfare.
+The user is asking a follow-up that should be answered by REASONING over the data already shown in this
+conversation. Do NOT invent new numbers. Do NOT pretend to query a database. Use only the rows below.
+
+{ctx}
+USER'S QUESTION: "{question}"
+
+HOW TO ANSWER:
+- Read the data rows above carefully. Identify which row(s) the question refers to.
+- For "why is X the lowest/highest?": look at the row's metadata (year, district, category, status). If the
+  row corresponds to the CURRENT calendar year and other rows are completed past years, the most likely
+  reason is the year is still in progress — say so explicitly. If a row's value is a partial period, say so.
+- For "explain that drop / spike / trend": describe what changed and over what time, using the actual
+  numbers from the rows. Do not speculate beyond what the data supports.
+- For "which is the highest/lowest among these?": name the actual row from the data with its exact value.
+- For "summarize / give me a summary": list the 2–3 most important numbers from the most recent turn.
+- If the data has a column that is empty/NULL (e.g., an "explanation" column with no values), DO NOT
+  treat the emptiness as a reason. NULL means "not recorded", not "data anomaly". Never cite a NULL field
+  as the cause of a number being high or low.
+- If you genuinely cannot answer from the data shown, say so honestly in one sentence and suggest a fresh
+  data query the user could ask.
+
+FORMATTING:
+- 2–4 sentences. Direct answer first, then the supporting numbers.
+- Use Indian comma notation (1,40,000 not 140000). Use "Rs." for amounts.
+- Do NOT mention SQL, queries, databases, or that this came from conversation history.
+{lang_instr}
+
+ANSWER:"""
 
 
 # ── SQL Generation ────────────────────────────────────────────────────────────
@@ -686,7 +941,7 @@ def build_nl_answer_prompt(
     """
     lang_name  = LANGS.get(language, "English")
     lang_instr = f"Respond in {lang_name}." if language != "en" else ""
-    ctx        = _fmt_context(context or [])
+    ctx        = _fmt_context(context or [], mode="compact", max_turns=3)
 
     return f"""You are a DSSY analytics assistant for the Department of Social Welfare, Government of Goa.
 {ctx}{COUNTS_GUARD}
@@ -696,21 +951,36 @@ Database returned {row_count} rows: {json.dumps(results[:50], default=str)}
 
 CRITICAL GROUNDING RULES — READ BEFORE ANSWERING:
 - Use ONLY numbers that appear verbatim in the data rows shown above. NEVER invent, estimate, or use numbers from training knowledge.
-- For ranking questions (highest/lowest/most/least/top/bottom/lowest/fewest/smallest): you MUST look at the actual data rows. The first row in the data IS the answer when ORDER BY is used — trust the row order.
-- IMPORTANT: If the SQL used ORDER BY count ASC (ascending), the FIRST ROW is the LOWEST/FEWEST. If it used ORDER BY count DESC (descending), the FIRST ROW is the HIGHEST/MOST.
-- When you see "last 3 years" or "payment comparison by year" in data: read each year row and state the actual amounts per year. Never say "no context available".
+- For ranking questions (highest/lowest/most/least/top/bottom/fewest/smallest): the row order from the SQL IS the answer.
+  ORDER BY ... ASC → first row is LOWEST. ORDER BY ... DESC → first row is HIGHEST.
 - Never write a number that is not present in the data above.
 - If the data has only 1 row (e.g., LIMIT 1 query), that single row IS the direct answer — state it directly.
 
+NULL / EMPTY COLUMN RULE (very important):
+- If the data has a column whose values are all NULL or all empty (for example an "explanation",
+  "remarks", or "note" column), DO NOT explain anything by referring to that emptiness.
+  NULL means "not recorded", it does NOT mean "data anomaly", "problem", or "decline".
+  Never write phrases like "this is attributed to a data anomaly because the explanation field is null."
+
+CURRENT-PERIOD RULE:
+- If the data spans multiple years/months and the most recent period has a noticeably lower value than
+  prior periods, the first thing to consider is: is that period still in progress? If yes, say "the
+  {{year}} figure reflects data so far this year and is expected to grow as more records are added."
+- The current calendar year is the year in CURRENT_DATE. If a row's year equals or exceeds the current
+  year, treat it as a partial period unless the data clearly shows otherwise.
+
+FOLLOW-UP CONTINUITY:
+- If this is a follow-up that combines/sums prior turns, reference the exact prior numbers from history
+  and show the arithmetic.
+- If the current question references "the previous", "that", "those" — use the most recent turn's data
+  in the history block above as the antecedent.
+
 FORMATTING RULES:
-- Lead with the most important finding or direct answer
-- If this is a follow-up (e.g., a sum or combination), reference the prior numbers from conversation history and show how they add up
-- Highlight highest/lowest values: name the actual winner/loser from the data, with their exact count
-- If multiple categories/districts, mention the top 2-3 AND the bottom 1-2 by name with exact numbers
-- Do NOT mention SQL, databases, queries, or technical terms
-- Format large numbers with Indian comma notation (e.g., 1,40,000 not 140000)
-- Use Rs. prefix for monetary amounts
-- Write 2-4 sentences maximum
+- Lead with the direct answer or most important finding.
+- Highlight highest/lowest values by name with exact numbers.
+- If many rows, mention the top 2–3 AND the bottom 1–2 by name with exact numbers.
+- Format large numbers with Indian comma notation (e.g., 1,40,000 not 140000). Use "Rs." for amounts.
+- 2–4 sentences. No mention of SQL, queries, databases, or technical pipeline.
 {lang_instr}
 
 Answer:"""
@@ -725,7 +995,7 @@ def build_rag_answer_prompt(
     """Answer from RAG chunks with conversation context for follow-up awareness."""
     lang_name  = LANGS.get(language, "English")
     lang_instr = f"Respond in {lang_name}." if language != "en" else ""
-    ctx        = _fmt_context(context or [])
+    ctx        = _fmt_context(context or [], mode="compact", max_turns=3)
 
     return f"""You are an expert assistant for the Dayanand Social Security Scheme (DSSY), Government of Goa.
 {ctx}Instructions:

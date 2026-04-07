@@ -25,6 +25,7 @@ from backend.services.gemini_service import (
     classify_intent, generate_sql, generate_nl_answer,
     rag_answer, validate_sql, suggest_chart,
     web_search_fallback,
+    answer_from_context,
     BASE, CHAT,
 )
 from backend.config import settings
@@ -165,6 +166,42 @@ async def query(req: QueryRequest):
     # ── Step 3: Classify Intent via Gemini ────────────────────
     intent = await classify_intent(resolved, ctx)
     logger.info(f"Intent: {intent} | Q: {resolved[:80]}")
+
+    # ── Step 3.5: REASON Path — answer over prior data (no fetch) ─
+    # Used for "why is X the lowest?", "explain that", "summarize the trend",
+    # "which one is the highest among these?". The model reasons from the
+    # conversation history; no SQL or RAG. If reasoning fails, we fall
+    # through to the SQL path so the user always gets an answer.
+    if intent == "REASON":
+        try:
+            reason_text = await answer_from_context(resolved, ctx, req.language)
+            if reason_text and reason_text.strip():
+                await context_store.add_turn(
+                    req.session_id, req.question, resolved,
+                    reason_text, "REASON",
+                )
+                # Carry the most recent prior turn's data forward so the UI
+                # can keep showing the same chart/table the user was
+                # discussing — REASON is about the prior data, not new data.
+                prior_with_data = next(
+                    (t for t in reversed(ctx) if t.intent != "EDGE" and t.sql_data),
+                    None,
+                )
+                prior_data = prior_with_data.sql_data if prior_with_data else None
+                return QueryResponse(
+                    question=req.question,
+                    answer=reason_text,
+                    intent="REASON",
+                    data=prior_data or [],
+                    row_count=len(prior_data) if prior_data else 0,
+                    execution_time_ms=int((time.time() - start) * 1000),
+                    confidence="high",
+                )
+            logger.info("REASON returned empty — falling through to SQL")
+        except Exception as e:
+            logger.warning(f"REASON path failed, falling through to SQL: {e}")
+        # Fall through to SQL path below — intent reset so we don't re-enter REASON.
+        intent = "SQL"
 
     # ── Step 4a: RAG Path (Agentic: local RAG → web search fallback) ─
     if intent == "RAG":

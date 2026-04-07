@@ -1170,6 +1170,10 @@ async function nlpQuery() {
   ansCard.classList.remove('show');
   document.getElementById('dynUpd').textContent = 'Fetching data…';
 
+  // New base question → wipe any prior follow-up chat so each chart owns its
+  // own conversation. Destroys mini chart instances first to avoid leaks.
+  resetFollowUp();
+
   try {
     const res = await fetch(`${BASE}/api/query`, {
       method: 'POST',
@@ -1310,6 +1314,24 @@ function showFollowUpBtn() {
   if (btn) btn.classList.add('show');
 }
 
+function resetFollowUp() {
+  // Tear down any Chart.js instances rendered inside the follow-up panel
+  Object.keys(_fuCI).forEach(k => {
+    try { _fuCI[k].destroy(); } catch(e) {}
+    delete _fuCI[k];
+  });
+  _fuChartIdx = 0;
+
+  const msgs = document.getElementById('fuMsgs');
+  if (msgs) msgs.innerHTML = '';
+
+  const panel = document.getElementById('fuPanel');
+  if (panel) panel.classList.remove('open');
+
+  const inp = document.getElementById('fuInp');
+  if (inp) inp.value = '';
+}
+
 function toggleFollowUp() {
   const panel = document.getElementById('fuPanel');
   if (!panel) return;
@@ -1378,8 +1400,10 @@ async function sendFollowUp() {
       }
     }
 
-    if (d.execution_time_ms && d.intent !== 'EDGE' && d.intent !== 'RAG') {
+    if (d.execution_time_ms && d.intent !== 'EDGE' && d.intent !== 'RAG' && d.intent !== 'REASON') {
       html += `<div class="meta">${d.row_count || 0} result${(d.row_count||0)===1?'':'s'} · ${d.execution_time_ms}ms</div>`;
+    } else if (d.intent === 'REASON') {
+      html += `<div class="meta">Reasoning over previous data · ${d.execution_time_ms}ms</div>`;
     }
     html += `</div>`;
 
@@ -1435,23 +1459,8 @@ async function sendFollowUp() {
       }
     }
 
-    // Also update the main AI insight and dynamic charts
-    if (d.answer) {
-      const mainAnsText = document.getElementById('nlpAnsText');
-      const mainAnsCard = document.getElementById('nlpAnsCard');
-      if (mainAnsText) mainAnsText.innerHTML = esc(d.answer);
-      if (mainAnsCard) mainAnsCard.classList.add('show');
-    }
-    if (d.data && d.data.length >= 1) {
-      renderDynCharts(q, d.data, d.chart_type);
-      // Update status bar
-      const statusEl = document.getElementById('nlpStatus');
-      if (statusEl) {
-        statusEl.textContent = d.row_count
-          ? `${d.row_count} result${d.row_count === 1 ? '' : 's'} · ${d.execution_time_ms}ms`
-          : '';
-      }
-    }
+    // Follow-up answers stay inside the chat panel — the main AI Insight and
+    // dynamic charts belong to the base question and must not be overwritten.
 
   } catch (err) {
     const te = document.getElementById(tid); if (te) te.remove();
