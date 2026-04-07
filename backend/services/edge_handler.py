@@ -304,8 +304,24 @@ def detect_edge_case(question: str) -> dict | None:
         # "and the X?", "what about X?" — short contextual follow-ups
         r"^(and|but)\s+(the|what)\b.{0,40}$",
         r"^what\s+about\s+.{2,30}$",
+        # Contextual follow-ups: explain, why, reason, correct, right, wrong
+        r"^(explain|why|reason|correct|right|wrong|is\s+this|is\s+that|you\s+give|you\s+gave)\b",
+        r"\b(explain|why)\s+(this|that|the|above|it|these|those|the\s+above)\b",
+        r"\b(is\s+this|is\s+that|is\s+it)\s+(correct|right|wrong|true|false|accurate)\b",
+        r"\b(this|that|the\s+above|previous|prior|earlier)\s+(is|was|seems?|looks?)\s+(correct|right|wrong|off|incorrect)\b",
+        r"\b(you\s+give|you\s+gave|you\s+said|you\s+told|you\s+mentioned)\b",
+        r"\byour\s+(opinion|thought|analysis|view|answer|response)\b",
+        r"^(yes|no|right|correct|wrong|exactly|not\s+right|that.?s\s+(right|wrong|correct|incorrect))\b",
     ]
     if any(re.search(p, ql) for p in _FOLLOWUP):
+        return None
+
+    # ── Non-English passthrough ──────────────────────────────────
+    # If the question contains significant non-ASCII characters (Hindi,
+    # Telugu, Kannada, Marathi, Konkani), let it through — the LLM
+    # understands these languages and can answer DSSY questions in them.
+    non_ascii_count = sum(1 for c in q if ord(c) > 127)
+    if non_ascii_count >= 3:
         return None
 
     # Whitelist: ONLY allow questions related to DSSY context
@@ -313,8 +329,9 @@ def detect_edge_case(question: str) -> dict | None:
     dssy_words = [
         # Scheme names
         "dssy", "dsss", "dayanand", "social security",
-        # Beneficiary terms
-        "beneficiar", "pension", "scheme", "welfare",
+        # Beneficiary terms (including common misspellings)
+        "beneficiar", "benificiar", "beneficier", "benficiar",
+        "pension", "scheme", "welfare",
         # Geography
         "taluka", "district", "goa", "bardez", "salcete", "tiswadi",
         "bicholim", "pernem", "sattari", "canacona", "quepem", "sanguem",
@@ -324,7 +341,7 @@ def detect_edge_case(question: str) -> dict | None:
         "category", "categories", "leprosy", "deaf", "cancer", "kidney", "sickle",
         # Financial
         "payment", "payout", "monthly amount", "financial assistance",
-        "rs\.", "rupee", "lakh", "crore", "batch", "ecs", "disburs",
+        r"rs\.", "rupee", "lakh", "crore", "batch", "ecs", "disburs",
         # Admin
         "eligible", "eligib", "registration", "active", "inactive", "deceased",
         "village", "life certificate", "aadhaar", "documents", "apply",
@@ -338,6 +355,9 @@ def detect_edge_case(question: str) -> dict | None:
         "enrollment", "enrolled", "status history", "status change",
         "fiscal year", "fiscal period", "quarter", "amount history",
         "category transfer",
+        # Year/date references (for queries like "year range", "2024 to 2026")
+        "year", "month", "date", "range", "period", "from.*to",
+        r"\b20\d{2}\b",
     ]
     has_dssy_context = any(re.search(w, ql) for w in dssy_words)
 

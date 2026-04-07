@@ -317,173 +317,75 @@ CREATE TABLE category_amount_history (
 
 # ── Few-Shot Examples ──────────────────────────────────────────────────────────
 
-SHOTS = """Q: total beneficiaries
-SQL: SELECT COUNT(*) AS total FROM beneficiaries;
-
-Q: how many total beneficiaries are there in DSSY / total beneficiaries in DSSY
+SHOTS = """-- PATTERN: Simple counts (with/without status filter)
+Q: total beneficiaries
 SQL: SELECT COUNT(*) AS total FROM beneficiaries;
 
 Q: active beneficiaries
 SQL: SELECT COUNT(*) AS total FROM beneficiaries WHERE status='Active';
 
-Q: inactive beneficiaries count
-SQL: SELECT COUNT(*) AS total FROM beneficiaries WHERE status='Inactive';
-
-Q: deceased beneficiaries count
-SQL: SELECT COUNT(*) AS total FROM beneficiaries WHERE status='Deceased';
-
-Q: gender breakdown
-SQL: SELECT gender, COUNT(*) AS count FROM beneficiaries WHERE status='Active' GROUP BY gender ORDER BY count DESC;
-
+-- PATTERN: Group by dimension (district/taluka/village/category/gender/status)
 Q: district wise count
-SQL: SELECT d.district_name AS district, COUNT(*) AS beneficiary_count FROM beneficiaries b JOIN districts d ON b.district_id = d.district_id GROUP BY d.district_name ORDER BY beneficiary_count DESC;
-
-Q: compare north goa south goa
-SQL: SELECT d.district_name AS district, COUNT(*) AS beneficiary_count FROM beneficiaries b JOIN districts d ON b.district_id = d.district_id WHERE b.status='Active' GROUP BY d.district_name ORDER BY beneficiary_count DESC;
+SQL: SELECT d.district_name AS district, COUNT(*) AS count FROM beneficiaries b JOIN districts d ON b.district_id = d.district_id WHERE b.status='Active' GROUP BY d.district_name ORDER BY count DESC;
 
 Q: category breakdown
 SQL: SELECT c.category_name AS category, COUNT(*) AS count FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE b.status='Active' GROUP BY c.category_name ORDER BY count DESC;
 
+Q: taluka wise active beneficiaries
+SQL: SELECT t.taluka_name AS taluka, d.district_name AS district, COUNT(*) AS count FROM beneficiaries b JOIN talukas t ON b.taluka_id = t.taluka_id JOIN districts d ON b.district_id = d.district_id WHERE b.status='Active' GROUP BY t.taluka_name, d.district_name ORDER BY count DESC;
+
+Q: gender breakdown
+SQL: SELECT gender, COUNT(*) AS count FROM beneficiaries WHERE status='Active' GROUP BY gender ORDER BY count DESC;
+
+Q: status wise beneficiary count
+SQL: SELECT status, COUNT(*) AS count FROM beneficiaries GROUP BY status ORDER BY count DESC;
+
+-- PATTERN: Filter by specific category
+Q: widow count
+SQL: SELECT COUNT(*) AS count FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE c.category_name = 'Widow' AND b.status='Active';
+
+Q: disabled 90 percent beneficiaries
+SQL: SELECT c.category_name AS category, COUNT(*) AS count FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE b.status='Active' AND LOWER(c.category_name) LIKE '%disabled%90%' GROUP BY c.category_name;
+
+-- PATTERN: Filter by district (district_id=1 is North Goa, district_id=2 is South Goa)
+Q: taluka wise beneficiaries in north goa
+SQL: SELECT t.taluka_name AS taluka, COUNT(*) AS count FROM beneficiaries b JOIN talukas t ON b.taluka_id = t.taluka_id WHERE b.district_id = 1 AND b.status='Active' GROUP BY t.taluka_name ORDER BY count DESC;
+
+-- PATTERN: Cross-dimension breakdown (two GROUP BY columns)
+Q: district and category cross breakdown
+SQL: SELECT d.district_name AS district, c.category_name AS category, COUNT(*) AS count FROM beneficiaries b JOIN districts d ON b.district_id = d.district_id JOIN categories c ON b.category_id = c.category_id WHERE b.status='Active' GROUP BY d.district_name, c.category_name ORDER BY d.district_name, count DESC;
+
+Q: category-wise male vs female count
+SQL: SELECT c.category_name AS category, b.gender, COUNT(*) AS count FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE b.status='Active' GROUP BY c.category_name, b.gender ORDER BY c.category_name, count DESC;
+
+-- PATTERN: Ranking (lowest/highest/top N)
+Q: which category has the lowest beneficiaries
+SQL: SELECT c.category_name AS category, COUNT(*) AS count FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE b.status='Active' GROUP BY c.category_name ORDER BY count ASC LIMIT 1;
+
+Q: top 5 talukas by active beneficiaries
+SQL: SELECT t.taluka_name AS taluka, d.district_name AS district, COUNT(*) AS count FROM beneficiaries b JOIN talukas t ON b.taluka_id = t.taluka_id JOIN districts d ON b.district_id = d.district_id WHERE b.status='Active' GROUP BY t.taluka_name, d.district_name ORDER BY count DESC LIMIT 5;
+
+-- PATTERN: Age-based queries
+Q: age distribution
+SQL: SELECT CASE WHEN age < 40 THEN 'Under 40' WHEN age BETWEEN 40 AND 59 THEN '40-59' WHEN age BETWEEN 60 AND 69 THEN '60-69' WHEN age BETWEEN 70 AND 79 THEN '70-79' ELSE '80+' END AS age_group, COUNT(*) AS count FROM beneficiaries WHERE status='Active' GROUP BY age_group ORDER BY MIN(age);
+
+Q: beneficiaries above 80
+SQL: SELECT COUNT(*) AS count FROM beneficiaries WHERE age > 80 AND status='Active';
+
+-- PATTERN: Payout/amount calculations
 Q: total monthly payout
 SQL: SELECT SUM(c.current_monthly_amount) AS total_monthly_payout FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE b.status='Active';
 
 Q: category wise monthly payout
 SQL: SELECT c.category_name AS category, COUNT(*) AS beneficiaries, SUM(c.current_monthly_amount) AS monthly_payout FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE b.status='Active' GROUP BY c.category_name ORDER BY monthly_payout DESC;
 
-Q: beneficiaries above 80
-SQL: SELECT COUNT(*) AS count FROM beneficiaries WHERE age > 80 AND status='Active';
-
-Q: taluka wise active beneficiaries
-SQL: SELECT t.taluka_name AS taluka, d.district_name AS district, COUNT(*) AS active_count FROM beneficiaries b JOIN talukas t ON b.taluka_id = t.taluka_id JOIN districts d ON b.district_id = d.district_id WHERE b.status='Active' GROUP BY t.taluka_name, d.district_name ORDER BY active_count DESC;
-
-Q: taluka wise beneficiaries in north goa
-SQL: SELECT t.taluka_name AS taluka, COUNT(*) AS count FROM beneficiaries b JOIN talukas t ON b.taluka_id = t.taluka_id WHERE b.district_id = 1 AND b.status='Active' GROUP BY t.taluka_name ORDER BY count DESC;
-
-Q: taluka wise beneficiaries in south goa
-SQL: SELECT t.taluka_name AS taluka, COUNT(*) AS count FROM beneficiaries b JOIN talukas t ON b.taluka_id = t.taluka_id WHERE b.district_id = 2 AND b.status='Active' GROUP BY t.taluka_name ORDER BY count DESC;
-
-Q: village wise beneficiaries
-SQL: SELECT v.village_name AS village, t.taluka_name AS taluka, COUNT(*) AS count FROM beneficiaries b JOIN villages v ON b.village_id = v.village_id JOIN talukas t ON b.taluka_id = t.taluka_id WHERE b.status='Active' GROUP BY v.village_name, t.taluka_name ORDER BY count DESC LIMIT 20;
-
-Q: widow count
-SQL: SELECT COUNT(*) AS widow_count FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE c.category_name = 'Widow' AND b.status='Active';
-
-Q: senior citizen count
-SQL: SELECT COUNT(*) AS senior_citizen_count FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE c.category_name = 'Senior Citizen' AND b.status='Active';
-
-Q: age distribution
-SQL: SELECT CASE WHEN age < 40 THEN 'Under 40' WHEN age BETWEEN 40 AND 59 THEN '40-59' WHEN age BETWEEN 60 AND 69 THEN '60-69' WHEN age BETWEEN 70 AND 79 THEN '70-79' ELSE '80+' END AS age_group, COUNT(*) AS count FROM beneficiaries WHERE status='Active' GROUP BY age_group ORDER BY MIN(age);
-
-Q: female beneficiaries by district
-SQL: SELECT d.district_name AS district, COUNT(*) AS female_count FROM beneficiaries b JOIN districts d ON b.district_id = d.district_id WHERE b.gender='Female' AND b.status='Active' GROUP BY d.district_name ORDER BY female_count DESC;
-
-Q: payment status summary
-SQL: SELECT status, COUNT(*) AS count FROM payments GROUP BY status ORDER BY count DESC;
-
-Q: total amount paid
-SQL: SELECT SUM(amount) AS total_paid FROM payments WHERE status='Paid';
-
-Q: payment compliance rate
-SQL: SELECT status, COUNT(*) AS count, ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 2) AS percentage FROM payments GROUP BY status ORDER BY count DESC;
-
-Q: top 5 talukas by active beneficiaries
-SQL: SELECT t.taluka_name AS taluka, d.district_name AS district, COUNT(*) AS active_count FROM beneficiaries b JOIN talukas t ON b.taluka_id = t.taluka_id JOIN districts d ON b.district_id = d.district_id WHERE b.status='Active' GROUP BY t.taluka_name, d.district_name ORDER BY active_count DESC LIMIT 5;
-
-Q: average age of beneficiaries by category
-SQL: SELECT c.category_name AS category, ROUND(AVG(b.age), 1) AS average_age, COUNT(*) AS total FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE b.status='Active' GROUP BY c.category_name ORDER BY average_age DESC;
-
-Q: district and category cross breakdown
-SQL: SELECT d.district_name AS district, c.category_name AS category, COUNT(*) AS count FROM beneficiaries b JOIN districts d ON b.district_id = d.district_id JOIN categories c ON b.category_id = c.category_id WHERE b.status='Active' GROUP BY d.district_name, c.category_name ORDER BY d.district_name, count DESC;
-
-Q: taluka with most senior citizens
-SQL: SELECT t.taluka_name AS taluka, d.district_name AS district, COUNT(*) AS senior_count FROM beneficiaries b JOIN talukas t ON b.taluka_id = t.taluka_id JOIN districts d ON b.district_id = d.district_id JOIN categories c ON b.category_id = c.category_id WHERE c.category_name='Senior Citizen' AND b.status='Active' GROUP BY t.taluka_name, d.district_name ORDER BY senior_count DESC LIMIT 1;
-
-Q: disabled beneficiaries count
-SQL: SELECT COUNT(*) AS disabled_count FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE LOWER(c.category_name) LIKE '%disabled%' AND b.status='Active';
-
-Q: HIV AIDS beneficiaries count
-SQL: SELECT COUNT(*) AS hiv_aids_count FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE c.category_name = 'HIV/AIDS' AND b.status='Active';
-
-Q: beneficiaries above 60 years
-SQL: SELECT COUNT(*) AS count FROM beneficiaries WHERE age >= 60 AND status='Active';
-
-Q: beneficiaries between 60 and 70
-SQL: SELECT COUNT(*) AS count FROM beneficiaries WHERE age BETWEEN 60 AND 70 AND status='Active';
-
-Q: single woman count
-SQL: SELECT COUNT(*) AS single_woman_count FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE c.category_name = 'Single Woman' AND b.status='Active';
-
-Q: total failed payments
-SQL: SELECT COUNT(*) AS failed_count, SUM(amount) AS failed_amount FROM payments WHERE status='Failed';
-
-Q: pending payments count
-SQL: SELECT COUNT(*) AS pending_count FROM payments WHERE status='Pending';
-
-Q: category wise average monthly amount
-SQL: SELECT c.category_name AS category, c.current_monthly_amount AS monthly_amount_rs FROM categories c ORDER BY c.current_monthly_amount DESC;
-
-Q: total beneficiaries per taluka in north goa with category breakdown
-SQL: SELECT t.taluka_name AS taluka, c.category_name AS category, COUNT(*) AS count FROM beneficiaries b JOIN talukas t ON b.taluka_id = t.taluka_id JOIN categories c ON b.category_id = c.category_id WHERE b.district_id = 1 AND b.status='Active' GROUP BY t.taluka_name, c.category_name ORDER BY t.taluka_name, count DESC;
-
-Q: male vs female active beneficiaries percentage
+-- PATTERN: Percentage calculations
+Q: male vs female percentage
 SQL: SELECT gender, COUNT(*) AS count, ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 2) AS percentage FROM beneficiaries WHERE status='Active' GROUP BY gender ORDER BY count DESC;
 
-Q: village wise top 10 beneficiaries
-SQL: SELECT v.village_name AS village, t.taluka_name AS taluka, d.district_name AS district, COUNT(*) AS count FROM beneficiaries b JOIN villages v ON b.village_id = v.village_id JOIN talukas t ON b.taluka_id = t.taluka_id JOIN districts d ON b.district_id = d.district_id WHERE b.status='Active' GROUP BY v.village_name, t.taluka_name, d.district_name ORDER BY count DESC LIMIT 10;
-
-Q: inactive beneficiaries by category
-SQL: SELECT c.category_name AS category, COUNT(*) AS inactive_count FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE b.status='Inactive' GROUP BY c.category_name ORDER BY inactive_count DESC;
-
-Q: deceased beneficiaries by district
-SQL: SELECT d.district_name AS district, COUNT(*) AS deceased_count FROM beneficiaries b JOIN districts d ON b.district_id = d.district_id WHERE b.status='Deceased' GROUP BY d.district_name ORDER BY deceased_count DESC;
-
-Q: combined total of active and inactive beneficiaries
-SQL: SELECT COUNT(*) AS total FROM beneficiaries WHERE status IN ('Active', 'Inactive');
-
-Q: combined total of active inactive and deceased
-SQL: SELECT COUNT(*) AS total FROM beneficiaries;
-
-Q: North Goa active beneficiaries
-SQL: SELECT COUNT(*) AS count FROM beneficiaries WHERE district_id=1 AND status='Active';
-
-Q: South Goa active beneficiaries
-SQL: SELECT COUNT(*) AS count FROM beneficiaries WHERE district_id=2 AND status='Active';
-
-Q: list all categories with beneficiary counts
-SQL: SELECT c.category_name AS category, COUNT(*) AS count, c.current_monthly_amount AS monthly_amount_rs FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE b.status='Active' GROUP BY c.category_name, c.current_monthly_amount ORDER BY count DESC;
-
-Q: which category has the lowest beneficiaries / which category has the least beneficiaries
-SQL: SELECT c.category_name AS category, COUNT(*) AS count FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE b.status='Active' GROUP BY c.category_name ORDER BY count ASC LIMIT 1;
-
-Q: which category has the highest beneficiaries
-SQL: SELECT c.category_name AS category, COUNT(*) AS count FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE b.status='Active' GROUP BY c.category_name ORDER BY count DESC LIMIT 1;
-
-Q: all categories ranked by count / show all categories sorted by beneficiary count
-SQL: SELECT c.category_name AS category, COUNT(*) AS count FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE b.status='Active' GROUP BY c.category_name ORDER BY count ASC;
-
-Q: disabled 90 percent beneficiaries / disabled 90+ count
-SQL: SELECT c.category_name AS category, COUNT(*) AS count FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE b.status='Active' AND LOWER(c.category_name) LIKE '%disabled%90%' GROUP BY c.category_name ORDER BY count DESC;
-
-Q: year wise payment comparison / compare payments last 3 years / payment trend by year / compare payments 2023 vs 2024 vs 2025 / last 3 years payment comparison
-SQL: SELECT ps.payment_year AS year, SUM(ps.total_beneficiaries) AS total_beneficiaries, SUM(ps.paid_count) AS paid_count, SUM(ps.pending_count) AS pending_count, SUM(ps.failed_count) AS failed_count, SUM(ps.total_base_amount) AS total_expected, SUM(ps.total_net_amount) AS total_paid, ROUND(SUM(ps.paid_count) * 100.0 / NULLIF(SUM(ps.total_beneficiaries), 0), 2) AS success_rate_pct FROM payment_summary ps WHERE ps.payment_year >= EXTRACT(YEAR FROM CURRENT_DATE)::INT - 2 GROUP BY ps.payment_year ORDER BY ps.payment_year;
-
-Q: year wise registration trend / registrations by year
-SQL: SELECT EXTRACT(YEAR FROM b.registration_date)::INT AS year, COUNT(*) AS registrations FROM beneficiaries b GROUP BY year ORDER BY year;
-
-Q: monthly payment trend for 2024 / month wise payments 2024
-SQL: SELECT ps.payment_month, SUM(ps.total_net_amount) AS total_paid, SUM(ps.paid_count) AS paid_count FROM payment_summary ps WHERE ps.payment_year = 2024 GROUP BY ps.payment_month ORDER BY ps.payment_month;
-
-Q: year wise active beneficiary registrations by category
-SQL: SELECT EXTRACT(YEAR FROM b.registration_date)::INT AS year, c.category_name AS category, COUNT(*) AS count FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE b.status='Active' GROUP BY year, category ORDER BY year, count DESC;
-
-Q: last 3 years payment summary / payment comparison across years / compare payout last 3 years
-SQL: SELECT ps.payment_year AS year, SUM(ps.total_beneficiaries) AS total_beneficiaries, SUM(ps.paid_count) AS paid_count, SUM(ps.pending_count) AS pending_count, SUM(ps.failed_count) AS failed_count, SUM(ps.total_base_amount) AS total_expected, SUM(ps.total_net_amount) AS total_paid, ROUND(SUM(ps.paid_count) * 100.0 / NULLIF(SUM(ps.total_beneficiaries), 0), 2) AS success_rate_pct FROM payment_summary ps WHERE ps.payment_year >= EXTRACT(YEAR FROM CURRENT_DATE)::INT - 2 GROUP BY ps.payment_year ORDER BY ps.payment_year;
-
-Q: last 3 years total payout amount
-SQL: SELECT ps.payment_year AS year, SUM(ps.total_net_amount) AS total_annual_payout, SUM(ps.total_beneficiaries) AS beneficiaries_covered FROM payment_summary ps WHERE ps.payment_year >= EXTRACT(YEAR FROM CURRENT_DATE)::INT - 2 GROUP BY ps.payment_year ORDER BY ps.payment_year;
-
-Q: year wise payment growth / payment trend by year / yearly payout comparison
-SQL: SELECT ps.payment_year AS year, SUM(ps.total_beneficiaries) AS total_beneficiaries, SUM(ps.paid_count) AS paid_count, SUM(ps.failed_count) AS failed_count, SUM(ps.total_net_amount) AS total_paid, ROUND(SUM(ps.paid_count) * 100.0 / NULLIF(SUM(ps.total_beneficiaries), 0), 2) AS success_rate_pct FROM payment_summary ps GROUP BY ps.payment_year ORDER BY ps.payment_year;
+-- PATTERN: Payment summary (yearly/historical — ALWAYS use payment_summary table)
+Q: year wise payment comparison
+SQL: SELECT ps.payment_year AS year, SUM(ps.total_beneficiaries) AS total_beneficiaries, SUM(ps.paid_count) AS paid_count, SUM(ps.pending_count) AS pending_count, SUM(ps.failed_count) AS failed_count, SUM(ps.total_net_amount) AS total_paid, ROUND(SUM(ps.paid_count) * 100.0 / NULLIF(SUM(ps.total_beneficiaries), 0), 2) AS success_rate_pct FROM payment_summary ps GROUP BY ps.payment_year ORDER BY ps.payment_year;
 
 Q: district wise payment comparison by year
 SQL: SELECT d.district_name AS district, ps.payment_year, SUM(ps.total_net_amount) AS total_paid, SUM(ps.paid_count) AS paid_count FROM payment_summary ps JOIN districts d ON ps.district_id = d.district_id WHERE ps.payment_year >= EXTRACT(YEAR FROM CURRENT_DATE)::INT - 2 GROUP BY d.district_name, ps.payment_year ORDER BY d.district_name, ps.payment_year;
@@ -491,143 +393,51 @@ SQL: SELECT d.district_name AS district, ps.payment_year, SUM(ps.total_net_amoun
 Q: category wise payment comparison last 3 years
 SQL: SELECT c.category_name AS category, ps.payment_year, SUM(ps.total_net_amount) AS total_paid, SUM(ps.paid_count) AS paid_count FROM payment_summary ps JOIN categories c ON ps.category_id = c.category_id WHERE ps.payment_year >= EXTRACT(YEAR FROM CURRENT_DATE)::INT - 2 GROUP BY c.category_name, ps.payment_year ORDER BY c.category_name, ps.payment_year;
 
-Q: pending payments by year
-SQL: SELECT ps.payment_year, SUM(ps.pending_count) AS pending_count FROM payment_summary ps GROUP BY ps.payment_year ORDER BY ps.payment_year;
-
-Q: payment batch summary / list all payment batches
-SQL: SELECT pb.batch_reference, pb.payment_month, pb.payment_year, pb.fiscal_year_label, pb.batch_status, pb.total_beneficiaries, pb.total_amount, pb.paid_count, pb.failed_count, pb.pending_count FROM payment_batches pb ORDER BY pb.payment_year DESC, pb.payment_month DESC LIMIT 12;
-
-Q: which batch had the most failures / batch with highest failed payments
-SQL: SELECT pb.batch_reference, pb.payment_year, pb.payment_month, pb.failed_count, pb.total_beneficiaries, ROUND(pb.failed_count * 100.0 / NULLIF(pb.total_beneficiaries, 0), 2) AS failure_rate_pct FROM payment_batches pb ORDER BY pb.failed_count DESC LIMIT 5;
-
-Q: total disbursed per fiscal year from batches / year wise batch total
-SQL: SELECT pb.fiscal_year_label, SUM(pb.total_amount) AS total_disbursed, SUM(pb.paid_count) AS total_paid, SUM(pb.failed_count) AS total_failed FROM payment_batches pb WHERE pb.batch_status = 'Completed' GROUP BY pb.fiscal_year_label ORDER BY pb.fiscal_year_label;
-
-Q: payment batch for april 2025 / batch details april 2025
-SQL: SELECT pb.batch_reference, pb.batch_status, pb.total_beneficiaries, pb.total_amount, pb.paid_count, pb.failed_count, pb.initiated_at, pb.completed_at FROM payment_batches pb WHERE pb.payment_year = 2025 AND pb.payment_month = 4;
-
-Q: life certificate compliance rate by taluka / which talukas have lowest compliance
-SQL: SELECT t.taluka_name AS taluka, d.district_name AS district, COUNT(b.beneficiary_id) AS total_active, COUNT(lc.cert_id) AS submitted, COUNT(b.beneficiary_id) - COUNT(lc.cert_id) AS not_submitted, ROUND(COUNT(lc.cert_id) * 100.0 / NULLIF(COUNT(b.beneficiary_id), 0), 2) AS compliance_pct FROM beneficiaries b JOIN talukas t ON b.taluka_id = t.taluka_id JOIN districts d ON b.district_id = d.district_id LEFT JOIN life_certificates lc ON lc.beneficiary_id = b.beneficiary_id AND lc.due_year = EXTRACT(YEAR FROM CURRENT_DATE)::INT WHERE b.status = 'Active' GROUP BY t.taluka_name, d.district_name ORDER BY compliance_pct ASC;
-
-Q: how many beneficiaries have not submitted life certificate / pending life certificates 2025
-SQL: SELECT COUNT(*) AS not_submitted FROM beneficiaries b WHERE b.status = 'Active' AND NOT EXISTS (SELECT 1 FROM life_certificates lc WHERE lc.beneficiary_id = b.beneficiary_id AND lc.due_year = 2025);
-
-Q: beneficiaries with payment suspended due to life certificate / suspended payments count
-SQL: SELECT COUNT(DISTINCT lc.beneficiary_id) AS suspended_count FROM life_certificates lc WHERE lc.payment_suspended = TRUE;
-
-Q: late life certificate submissions by category
-SQL: SELECT c.category_name AS category, COUNT(lc.cert_id) AS late_submissions, ROUND(AVG(lc.days_late), 1) AS avg_days_late FROM life_certificates lc JOIN beneficiaries b ON lc.beneficiary_id = b.beneficiary_id JOIN categories c ON b.category_id = c.category_id WHERE lc.is_late_submission = TRUE GROUP BY c.category_name ORDER BY late_submissions DESC;
-
-Q: life certificate compliance by district
-SQL: SELECT d.district_name AS district, COUNT(b.beneficiary_id) AS total_active, COUNT(lc.cert_id) AS submitted, ROUND(COUNT(lc.cert_id) * 100.0 / NULLIF(COUNT(b.beneficiary_id), 0), 2) AS compliance_pct FROM beneficiaries b JOIN districts d ON b.district_id = d.district_id LEFT JOIN life_certificates lc ON lc.beneficiary_id = b.beneficiary_id AND lc.due_year = EXTRACT(YEAR FROM CURRENT_DATE)::INT WHERE b.status = 'Active' GROUP BY d.district_name ORDER BY compliance_pct ASC;
-
-Q: year wise life certificate submissions / how many life certs submitted each year
-SQL: SELECT lc.due_year AS year, COUNT(*) AS total_submitted, COUNT(*) FILTER (WHERE lc.is_late_submission = TRUE) AS late_submissions, COUNT(*) FILTER (WHERE lc.payment_suspended = TRUE) AS suspensions FROM life_certificates lc GROUP BY lc.due_year ORDER BY lc.due_year DESC;
-
-Q: beneficiaries who changed category / category transfers
-SQL: SELECT b.beneficiary_code, c_old.category_name AS from_category, c_new.category_name AS to_category, se.end_date AS transfer_date FROM scheme_enrollments se JOIN beneficiaries b ON se.beneficiary_id = b.beneficiary_id JOIN categories c_old ON se.category_id = c_old.category_id JOIN scheme_enrollments se_new ON se_new.beneficiary_id = se.beneficiary_id AND se_new.is_current = TRUE AND se.is_current = FALSE JOIN categories c_new ON se_new.category_id = c_new.category_id WHERE se.end_date IS NOT NULL ORDER BY se.end_date DESC LIMIT 20;
-
-Q: how many beneficiaries became inactive in 2024 / status changes in 2024
-SQL: SELECT new_status, COUNT(*) AS count FROM beneficiary_status_history WHERE DATE_PART('year', changed_at) = 2024 GROUP BY new_status ORDER BY count DESC;
-
-Q: status transitions by year / yearly status change trend
-SQL: SELECT DATE_PART('year', changed_at)::INT AS year, new_status, COUNT(*) AS count FROM beneficiary_status_history GROUP BY year, new_status ORDER BY year DESC, count DESC;
-
-Q: enrollments by year / enrollment trend
-SQL: SELECT enrollment_year AS year, COUNT(*) AS enrollments FROM scheme_enrollments GROUP BY enrollment_year ORDER BY enrollment_year;
-
-Q: current fiscal year / what fiscal year is it
-SQL: SELECT fiscal_year, fiscal_year_label, quarter, quarter_label, period_start, period_end FROM fiscal_periods WHERE is_current = TRUE;
-
-Q: pension amount history for senior citizens / when did pension amount change
-SQL: SELECT cah.monthly_amount, cah.effective_from, cah.effective_to, cah.reason FROM category_amount_history cah JOIN categories c ON cah.category_id = c.category_id WHERE c.category_name = 'Senior Citizen' ORDER BY cah.effective_from;
-
-Q: show all categories ranked by active beneficiary count ascending / all categories ranked by count ascending / categories from lowest to highest
-SQL: SELECT c.category_name AS category, COUNT(*) AS count FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE b.status='Active' GROUP BY c.category_name ORDER BY count ASC;
-
-Q: show inactive beneficiaries count by category / inactive beneficiaries by category / category wise inactive count
-SQL: SELECT c.category_name AS category, COUNT(*) AS inactive_count FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE b.status='Inactive' GROUP BY c.category_name ORDER BY inactive_count DESC;
-
-Q: show year wise beneficiary registration trend / year wise registration count / registration trend by year / beneficiary registrations per year
-SQL: SELECT EXTRACT(YEAR FROM b.registration_date)::INT AS year, COUNT(*) AS registrations FROM beneficiaries b WHERE b.registration_date IS NOT NULL GROUP BY year ORDER BY year;
-
-Q: total disbursed amount per fiscal year from payment batches / total disbursement by fiscal year / fiscal year wise total payout from batches
-SQL: SELECT pb.fiscal_year_label, SUM(pb.total_amount) AS total_disbursed, SUM(pb.paid_count) AS total_paid, SUM(pb.failed_count) AS total_failed FROM payment_batches pb WHERE pb.batch_status = 'Completed' GROUP BY pb.fiscal_year_label ORDER BY pb.fiscal_year_label;
-
-Q: total disbursement amount this fiscal year / total payout current fiscal year
-SQL: SELECT pb.fiscal_year_label, SUM(pb.total_amount) AS total_disbursed, SUM(pb.paid_count) AS total_paid, SUM(pb.failed_count) AS total_failed FROM payment_batches pb WHERE pb.batch_status = 'Completed' AND pb.fiscal_year_label = (SELECT fiscal_year_label FROM fiscal_periods WHERE is_current = TRUE LIMIT 1) GROUP BY pb.fiscal_year_label;
-
-Q: new beneficiaries registered in the last 6 months by category / recent registrations by category
-SQL: SELECT c.category_name AS category, COUNT(*) AS new_registrations FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE b.registration_date >= CURRENT_DATE - INTERVAL '6 months' GROUP BY c.category_name ORDER BY new_registrations DESC;
-
-Q: category-wise male vs female count / male vs female by category
-SQL: SELECT c.category_name AS category, b.gender, COUNT(*) AS count FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE b.status='Active' GROUP BY c.category_name, b.gender ORDER BY c.category_name, count DESC;
-
-Q: district-wise total payment disbursement last year / district wise payout last year
-SQL: SELECT d.district_name AS district, SUM(ps.total_net_amount) AS total_disbursed, SUM(ps.paid_count) AS paid_count FROM payment_summary ps JOIN districts d ON ps.district_id = d.district_id WHERE ps.payment_year = EXTRACT(YEAR FROM CURRENT_DATE)::INT - 1 GROUP BY d.district_name ORDER BY total_disbursed DESC;
-
-Q: payment failure rate by month for last 12 months / monthly failure rate
-SQL: SELECT pb.payment_year, pb.payment_month, pb.failed_count, pb.total_beneficiaries, ROUND(pb.failed_count * 100.0 / NULLIF(pb.total_beneficiaries, 0), 2) AS failure_rate_pct FROM payment_batches pb ORDER BY pb.payment_year DESC, pb.payment_month DESC LIMIT 12;
-
-Q: pending payments count and amount this month / current pending payments
-SQL: SELECT COUNT(*) AS pending_count, SUM(amount) AS pending_amount FROM payments WHERE status='Pending';
-
-Q: average payment amount per beneficiary by category / avg payment by category
-SQL: SELECT c.category_name AS category, ROUND(AVG(p.amount), 2) AS avg_payment, COUNT(DISTINCT p.beneficiary_id) AS beneficiaries_paid FROM payments p JOIN beneficiaries b ON p.beneficiary_id = b.beneficiary_id JOIN categories c ON b.category_id = c.category_id WHERE p.status = 'Paid' GROUP BY c.category_name ORDER BY avg_payment DESC;
-
-Q: year-on-year payment growth percentage / yoy payment growth
+Q: year-on-year payment growth percentage
 SQL: SELECT ps.payment_year AS year, SUM(ps.total_net_amount) AS total_paid, ROUND((SUM(ps.total_net_amount) - LAG(SUM(ps.total_net_amount)) OVER (ORDER BY ps.payment_year)) * 100.0 / NULLIF(LAG(SUM(ps.total_net_amount)) OVER (ORDER BY ps.payment_year), 0), 2) AS growth_pct FROM payment_summary ps GROUP BY ps.payment_year ORDER BY ps.payment_year;
 
-Q: failed payments by district / district wise failed payments
-SQL: SELECT d.district_name AS district, SUM(ps.failed_count) AS failed_count, ROUND(SUM(ps.failed_count) * 100.0 / NULLIF(SUM(ps.total_beneficiaries), 0), 2) AS failure_rate_pct FROM payment_summary ps JOIN districts d ON ps.district_id = d.district_id GROUP BY d.district_name ORDER BY failed_count DESC;
+-- PATTERN: Payment batches (monthly ECS batch data)
+Q: payment batch summary
+SQL: SELECT pb.batch_reference, pb.payment_month, pb.payment_year, pb.fiscal_year_label, pb.batch_status, pb.total_beneficiaries, pb.total_amount, pb.paid_count, pb.failed_count, pb.pending_count FROM payment_batches pb ORDER BY pb.payment_year DESC, pb.payment_month DESC LIMIT 12;
 
-Q: payment batch summary last 6 months / recent batch summary
-SQL: SELECT pb.batch_reference, pb.payment_month, pb.payment_year, pb.fiscal_year_label, pb.batch_status, pb.total_beneficiaries, pb.total_amount, pb.paid_count, pb.failed_count, pb.pending_count FROM payment_batches pb ORDER BY pb.payment_year DESC, pb.payment_month DESC LIMIT 6;
+Q: total disbursed per fiscal year from batches
+SQL: SELECT pb.fiscal_year_label, SUM(pb.total_amount) AS total_disbursed, SUM(pb.paid_count) AS total_paid, SUM(pb.failed_count) AS total_failed FROM payment_batches pb WHERE pb.batch_status = 'Completed' GROUP BY pb.fiscal_year_label ORDER BY pb.fiscal_year_label;
 
-Q: late life certificate submissions by taluka / taluka wise late submissions
-SQL: SELECT t.taluka_name AS taluka, d.district_name AS district, COUNT(lc.cert_id) AS late_submissions, ROUND(AVG(lc.days_late), 1) AS avg_days_late FROM life_certificates lc JOIN beneficiaries b ON lc.beneficiary_id = b.beneficiary_id JOIN talukas t ON b.taluka_id = t.taluka_id JOIN districts d ON b.district_id = d.district_id WHERE lc.is_late_submission = TRUE GROUP BY t.taluka_name, d.district_name ORDER BY late_submissions DESC;
+-- PATTERN: Individual payments table (recent data only — last 6 months)
+Q: payment status summary
+SQL: SELECT status, COUNT(*) AS count FROM payments GROUP BY status ORDER BY count DESC;
 
-Q: compare north goa vs south goa beneficiary count and payout / north vs south goa comparison with payout
-SQL: SELECT d.district_name AS district, COUNT(*) AS beneficiary_count, SUM(c.current_monthly_amount) AS monthly_payout FROM beneficiaries b JOIN districts d ON b.district_id = d.district_id JOIN categories c ON b.category_id = c.category_id WHERE b.status='Active' GROUP BY d.district_name ORDER BY beneficiary_count DESC;
+Q: average payment amount per beneficiary by category
+SQL: SELECT c.category_name AS category, ROUND(AVG(p.amount), 2) AS avg_payment, COUNT(DISTINCT p.beneficiary_id) AS beneficiaries_paid FROM payments p JOIN beneficiaries b ON p.beneficiary_id = b.beneficiary_id JOIN categories c ON b.category_id = c.category_id WHERE p.status = 'Paid' GROUP BY c.category_name ORDER BY avg_payment DESC;
 
-Q: taluka-wise payment failure rate / taluka failure rates
-SQL: SELECT t.taluka_name AS taluka, d.district_name AS district, SUM(ps.failed_count) AS failed_count, SUM(ps.total_beneficiaries) AS total_beneficiaries, ROUND(SUM(ps.failed_count) * 100.0 / NULLIF(SUM(ps.total_beneficiaries), 0), 2) AS failure_rate_pct FROM payment_summary ps JOIN talukas t ON ps.taluka_id = t.taluka_id JOIN districts d ON t.district_id = d.district_id GROUP BY t.taluka_name, d.district_name ORDER BY failure_rate_pct DESC;
+-- PATTERN: Life certificates (annual compliance)
+Q: life certificate compliance rate by taluka
+SQL: SELECT t.taluka_name AS taluka, d.district_name AS district, COUNT(b.beneficiary_id) AS total_active, COUNT(lc.cert_id) AS submitted, ROUND(COUNT(lc.cert_id) * 100.0 / NULLIF(COUNT(b.beneficiary_id), 0), 2) AS compliance_pct FROM beneficiaries b JOIN talukas t ON b.taluka_id = t.taluka_id JOIN districts d ON b.district_id = d.district_id LEFT JOIN life_certificates lc ON lc.beneficiary_id = b.beneficiary_id AND lc.due_year = EXTRACT(YEAR FROM CURRENT_DATE)::INT WHERE b.status = 'Active' GROUP BY t.taluka_name, d.district_name ORDER BY compliance_pct ASC;
 
-Q: district-wise category breakdown / district category cross tab
-SQL: SELECT d.district_name AS district, c.category_name AS category, COUNT(*) AS count FROM beneficiaries b JOIN districts d ON b.district_id = d.district_id JOIN categories c ON b.category_id = c.category_id WHERE b.status='Active' GROUP BY d.district_name, c.category_name ORDER BY d.district_name, count DESC;
+Q: year wise life certificate submissions
+SQL: SELECT lc.due_year AS year, COUNT(*) AS total_submitted, COUNT(*) FILTER (WHERE lc.is_late_submission = TRUE) AS late_submissions, COUNT(*) FILTER (WHERE lc.payment_suspended = TRUE) AS suspensions FROM life_certificates lc GROUP BY lc.due_year ORDER BY lc.due_year DESC;
 
-Q: widow beneficiaries by taluka / taluka wise widow count
-SQL: SELECT t.taluka_name AS taluka, d.district_name AS district, COUNT(*) AS widow_count FROM beneficiaries b JOIN talukas t ON b.taluka_id = t.taluka_id JOIN districts d ON b.district_id = d.district_id JOIN categories c ON b.category_id = c.category_id WHERE c.category_name = 'Widow' AND b.status='Active' GROUP BY t.taluka_name, d.district_name ORDER BY widow_count DESC;
+-- PATTERN: Registration trends
+Q: year wise registration trend
+SQL: SELECT EXTRACT(YEAR FROM b.registration_date)::INT AS year, COUNT(*) AS registrations FROM beneficiaries b WHERE b.registration_date IS NOT NULL GROUP BY year ORDER BY year;
 
-Q: total active vs inactive vs deceased beneficiaries / status wise beneficiary count
-SQL: SELECT status, COUNT(*) AS count FROM beneficiaries GROUP BY status ORDER BY count DESC;
+Q: new beneficiaries registered in the last 6 months by category
+SQL: SELECT c.category_name AS category, COUNT(*) AS new_registrations FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE b.registration_date >= CURRENT_DATE - INTERVAL '6 months' GROUP BY c.category_name ORDER BY new_registrations DESC;
 
-Q: senior citizen beneficiaries above age 80 / senior citizens 80+
-SQL: SELECT COUNT(*) AS count FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE c.category_name = 'Senior Citizen' AND b.age > 80 AND b.status='Active';
+-- PATTERN: Status history / enrollments
+Q: status changes in 2024
+SQL: SELECT new_status, COUNT(*) AS count FROM beneficiary_status_history WHERE DATE_PART('year', changed_at) = 2024 GROUP BY new_status ORDER BY count DESC;
 
-Q: deceased beneficiaries count by category and district / deceased by category and district
-SQL: SELECT d.district_name AS district, c.category_name AS category, COUNT(*) AS deceased_count FROM beneficiaries b JOIN districts d ON b.district_id = d.district_id JOIN categories c ON b.category_id = c.category_id WHERE b.status='Deceased' GROUP BY d.district_name, c.category_name ORDER BY d.district_name, deceased_count DESC;
+Q: category transfers
+SQL: SELECT b.beneficiary_code, c_old.category_name AS from_category, c_new.category_name AS to_category, se.end_date AS transfer_date FROM scheme_enrollments se JOIN beneficiaries b ON se.beneficiary_id = b.beneficiary_id JOIN categories c_old ON se.category_id = c_old.category_id JOIN scheme_enrollments se_new ON se_new.beneficiary_id = se.beneficiary_id AND se_new.is_current = TRUE AND se.is_current = FALSE JOIN categories c_new ON se_new.category_id = c_new.category_id WHERE se.end_date IS NOT NULL ORDER BY se.end_date DESC LIMIT 20;
 
-Q: list inactive beneficiaries by district / inactive beneficiaries by district / inactive count by district
-SQL: SELECT d.district_name AS district, COUNT(*) AS inactive_count FROM beneficiaries b JOIN districts d ON b.district_id = d.district_id WHERE b.status='Inactive' GROUP BY d.district_name ORDER BY inactive_count DESC;
+-- PATTERN: Pension amount history
+Q: pension amount history for senior citizens
+SQL: SELECT cah.monthly_amount, cah.effective_from, cah.effective_to, cah.reason FROM category_amount_history cah JOIN categories c ON cah.category_id = c.category_id WHERE c.category_name = 'Senior Citizen' ORDER BY cah.effective_from;
 
-Q: category-wise beneficiary breakdown / category wise beneficiary distribution / show category wise distribution
-SQL: SELECT c.category_name AS category, COUNT(*) AS count FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE b.status='Active' GROUP BY c.category_name ORDER BY count DESC;
-
-Q: life certificate compliance rate by year / year wise life cert compliance
-SQL: SELECT lc.due_year AS year, COUNT(*) AS total_certs, COUNT(*) FILTER (WHERE lc.payment_suspended = FALSE) AS compliant, COUNT(*) FILTER (WHERE lc.payment_suspended = TRUE) AS suspended, ROUND(COUNT(*) FILTER (WHERE lc.payment_suspended = FALSE) * 100.0 / NULLIF(COUNT(*), 0), 1) AS compliance_pct FROM life_certificates lc GROUP BY lc.due_year ORDER BY lc.due_year DESC;
-
-Q: how many DSSY beneficiaries are above the age of 60 in North Goa / senior beneficiaries in north goa
-SQL: SELECT COUNT(*) AS count FROM beneficiaries WHERE age >= 60 AND district_id = 1 AND status='Active';
-
-Q: how many beneficiaries were added after 2020 / new beneficiaries after 2020 / registrations since 2020
-SQL: SELECT COUNT(*) AS new_beneficiaries FROM beneficiaries WHERE registration_date >= '2020-01-01';
-
-Q: how many new beneficiaries were added after 2022 / registrations since 2022
-SQL: SELECT COUNT(*) AS new_beneficiaries FROM beneficiaries WHERE registration_date >= '2022-01-01';
-
-Q: which talukas show the highest increase in beneficiaries / taluka with most growth
-SQL: SELECT t.taluka_name AS taluka, d.district_name AS district, COUNT(*) AS recent_registrations FROM beneficiaries b JOIN talukas t ON b.taluka_id = t.taluka_id JOIN districts d ON b.district_id = d.district_id WHERE b.registration_date >= CURRENT_DATE - INTERVAL '5 years' GROUP BY t.taluka_name, d.district_name ORDER BY recent_registrations DESC;
+-- PATTERN: Fiscal periods
+Q: current fiscal year
+SQL: SELECT fiscal_year, fiscal_year_label, quarter, quarter_label, period_start, period_end FROM fiscal_periods WHERE is_current = TRUE;
 """
 
 # ── Follow-up signal detection (heuristic, no API call) ───────────────────────
@@ -642,15 +452,17 @@ _FOLLOWUP_SIGNALS = frozenset([
     'for that', 'of that', 'in that case', 'then what', 'and inactive',
     'and active', 'and deceased', 'and female', 'and male',
     'that one', 'those', ' it ', 'its ', 'their ', 'them',
+    'compare to all', 'all years', 'which year', 'year wise', 'year-wise',
+    'this category', 'that category', 'the lowest', 'the highest',
+    'has the lowest', 'has the highest', 'and why',
 ])
 
 
 def is_followup(question: str, context: list[ConversationTurn]) -> bool:
     """
-    Fast heuristic: returns True if the question is likely a follow-up
-    that needs resolution before being routed. Skips Gemini call if False.
-    Only considers analytical turns (SQL/RAG) — EDGE turns (greetings, etc.)
-    don't establish context worth following up on.
+    Determines if a question needs context-aware resolution before routing.
+    Leans towards True when there IS prior context — the resolver is cheap
+    (one fast Gemini call) and wrong routing is expensive (wrong answer).
     """
     if not context:
         return False
@@ -659,10 +471,24 @@ def is_followup(question: str, context: list[ConversationTurn]) -> bool:
     if not analytical:
         return False
     q = question.lower().strip()
-    # Very short questions (≤5 words) are almost always follow-ups
-    if len(q.split()) <= 5:
+    # Very short questions (≤8 words) with context almost always need resolution
+    if len(q.split()) <= 8:
         return True
-    return any(sig in q for sig in _FOLLOWUP_SIGNALS)
+    # Explicit follow-up signals
+    if any(sig in q for sig in _FOLLOWUP_SIGNALS):
+        return True
+    # If the question mentions subjects from recent context, it's likely a follow-up
+    last = analytical[-1]
+    last_q = last.resolved_question.lower()
+    # Check for shared nouns (category names, district names, etc.)
+    key_terms = {'disabled', 'widow', 'senior', 'hiv', 'single woman',
+                 'north goa', 'south goa', 'active', 'inactive', 'deceased',
+                 'category', 'district', 'taluka', 'payment', 'payout'}
+    q_terms = {t for t in key_terms if t in q}
+    ctx_terms = {t for t in key_terms if t in last_q}
+    if q_terms & ctx_terms:  # shared terms = likely continuation
+        return True
+    return False
 
 
 # ── Internal context formatter ─────────────────────────────────────────────────
@@ -714,9 +540,10 @@ def build_question_resolver_prompt(question: str, context: list[ConversationTurn
             ctx_lines.append(f"     Actual data returned: {json.dumps(t.sql_data, default=str)}")
     ctx_block = "\n".join(ctx_lines)
 
-    return f"""You are a query resolver for the DSSY (Dayanand Social Security Scheme) analytics assistant.
+    return f"""You are a query resolver for the DSSY (Dayanand Social Security Scheme) analytics system.
 
-Your job: Convert a follow-up question into a COMPLETE, STANDALONE question that can be answered independently, using the conversation history for context.
+Your job: Rewrite the user's question into a COMPLETE, STANDALONE question using conversation history.
+The rewritten question must make sense on its own — someone reading it without the history should understand exactly what data is being asked for.
 
 CONVERSATION HISTORY:
 {ctx_block}
@@ -724,20 +551,23 @@ CONVERSATION HISTORY:
 CURRENT QUESTION: "{question}"
 
 RULES:
-1. If the question references prior results ("what about X", "same for Y", "and Z?") → complete it fully
-2. If the question asks for arithmetic on prior data ("sum of active and inactive", "add both") → write the full aggregation question with all terms named explicitly
-3. If the question uses pronouns ("it", "that", "those", "them") → replace with the specific subject from history
-4. If a filter from prior context applies ("in North Goa", "for widows") → carry it forward unless the user explicitly changes it
-5. If the question is already self-contained → return it unchanged
-6. ALWAYS stay within the DSSY scheme domain (beneficiaries, districts, categories, payments)
+1. Replace pronouns/references ("it", "that", "this category", "those") with the actual subject from history
+2. Carry forward filters from context (district, category, status) unless the user explicitly changes them
+3. If the user asks to visualize/graph/chart the SAME data from prior context, rewrite as the data query (e.g., "draw a graph" → repeat the prior data question)
+4. If the user asks "why" about a data pattern, keep it as a data question — add the relevant breakdown/comparison so the SQL can provide the answer through data
+5. If the user is confirming/correcting prior results ("X has the lowest right?"), rewrite as a comparative query that can verify the claim
+6. If already self-contained, return unchanged
+7. IMPORTANT: Preserve the user's analytical intent — if they want comparison, trend, breakdown, ranking, keep that in the rewrite
 
 EXAMPLES:
-History: active beneficiaries = 45,231 | Q: "what about inactive?" → "How many inactive beneficiaries are there?"
-History: active = 45,231, inactive = 12,453 | Q: "sum of both?" → "What is the combined total of active and inactive beneficiaries?"
-History: district-wise breakdown | Q: "which is highest?" → "Which district has the highest number of active beneficiaries?"
-History: widow count in North Goa | Q: "what about South Goa?" → "How many widow beneficiaries are there in South Goa?"
-History: category breakdown | Q: "now show females only" → "Show female beneficiary count by category"
-History: active = 45,231, inactive = 12,453, deceased = 5,100 | Q: "total of all three?" → "What is the combined total of active, inactive, and deceased beneficiaries?"
+"what about inactive?" (after active count) → "How many inactive beneficiaries are there?"
+"sum of both?" (after active + inactive) → "What is the combined total of active and inactive beneficiaries?"
+"which is highest?" (after district breakdown) → "Which district has the highest number of active beneficiaries?"
+"draw a graph" (after category-wise count) → "Show category-wise active beneficiary count"
+"compare to all years which year got disabled 90% lowest and why?" → "Show year-wise total beneficiaries count for Disabled 90% category ordered by count ascending"
+"disabled 80% has the lowest right?" (after showing Disabled 90% was lowest) → "Show all categories with their active beneficiary count ordered by count ascending"
+"show trend for this" (after Disabled 90% data) → "Show year-wise Disabled 90% beneficiary count trend"
+"what about South Goa?" (after North Goa widow count) → "How many widow beneficiaries are there in South Goa?"
 
 Output ONLY the rewritten question — no explanation, no prefix, no quotes.
 
@@ -749,106 +579,30 @@ REWRITTEN QUESTION:"""
 def build_intent_prompt(question: str, context: list[ConversationTurn] = None) -> str:
     """Classify question as SQL or RAG, with conversation history for follow-up awareness."""
     ctx = _fmt_context(context or [])
-    return f"""{ctx}Route this question to the correct handler for the DSSY government welfare analytics system.
+    return f"""{ctx}Route this question to SQL or RAG for the DSSY (Dayanand Social Security Scheme) analytics system.
 
-CRITICAL RULE: If the question contains "how many" or "total" or "count" together with "beneficiaries",
-it is ALWAYS SQL — even if "DSSY" or scheme names appear in the question. SQL answers from the live database.
+SQL = query the LIVE DATABASE for numbers, counts, statistics, comparisons, breakdowns, trends, charts, lists.
+RAG = search SCHEME DOCUMENTS for rules, policies, eligibility criteria, procedures, history, official notifications.
 
-SQL  — question wants COUNTS, STATISTICS, LISTS, or COMPARISONS from the beneficiary DATABASE
-       Keywords: how many, count, total, show me, list, compare, district-wise, taluka-wise,
-       active/inactive/deceased, payout, payment status, age distribution, top N, breakdown, trend,
-       percentage, village-wise, gender, registration, female, male, category-wise, combined, sum,
-       last 3 years, year-wise, year wise, monthly, 2023, 2024, 2025, payment trend, payment comparison,
-       which is lowest, which is highest, which has least, which has most, rank, ranked, sort by,
-       disabled 90, disabled 40, disabled 80, hiv, single woman, widow, senior citizen count, beneficiary count,
-       life certificate compliance, life cert submitted, not submitted, payment suspended, suspended payments,
-       batch, payment batch, ecs batch, batch status, batch failures, batch total, batch reference,
-       dashboard, dynamic dashboard, chart, visualization, graph, report, fiscal year, fiscal period,
-       enrollment, enrolled, category transfer, status change, status history, became inactive, became deceased,
-       pension amount history, amount change, officer, approval
-
-RAG  — question wants RULES, POLICY, ELIGIBILITY, DOCUMENTS, AMOUNTS, HISTORY, or PROCEDURES
-       from OFFICIAL SCHEME DOCUMENTS (NOT counts or numbers from the database)
-       Keywords: who is eligible, what documents, how much pension, how to apply, what is DSSY,
-       cancellation, income limit, registration fee, amendment, launched, history,
-       widow rules, disabled rules, grievance, which schemes merged, what is DDSSY, payment process,
-       bank account, CAG audit, notification number, Griha Aadhar
+DECISION RULES (in priority order):
+1. If conversation history has SQL data AND this question continues that conversation (drill-down, comparison, chart, "why", confirmation) → SQL
+2. If the question asks for NUMBERS or STATISTICS about beneficiaries, payments, categories, districts → SQL
+3. If the question asks about RULES, ELIGIBILITY, PROCEDURES, POLICY, DOCUMENTS, or SCHEME HISTORY → RAG
+4. When in doubt, prefer SQL — the SQL generator can return CANNOT_ANSWER if it truly can't handle it.
 
 EXAMPLES:
-"How many total beneficiaries are there in DSSY?" → SQL
 "How many active beneficiaries?" → SQL
-"How many total beneficiaries?" → SQL
-"What documents are needed?" → RAG
 "District-wise breakdown" → SQL
+"Category with lowest count" → SQL
+"Compare payments last 3 years" → SQL
+"draw a graph" → SQL
+"and why?" → SQL
 "Who is eligible for DSSY?" → RAG
-"Total widow beneficiaries in North Goa" → SQL
-"How much pension do disabled persons get?" → RAG
-"Show me top 5 talukas" → SQL
-"What is the income limit for DSSY?" → RAG
-"Combined total of active and inactive beneficiaries" → SQL
-"What about inactive beneficiaries?" → SQL
-"How many became inactive in 2024?" → SQL
-"Show enrollment trend by year" → SQL
-"Which beneficiaries changed category?" → SQL
-"What is the current fiscal year?" → SQL
-"Payment batch for April 2025" → SQL
-"When did pension amount change for senior citizens?" → SQL
-"Dynamic dashboard for North Goa" → SQL
-"Show fiscal year wise payment comparison" → SQL
+"What documents are needed?" → RAG
 "How to apply for DSSY?" → RAG
-"What is the cancellation process?" → RAG
-"What was the original pension amount when DSSY started?" → RAG
-"Where is the Department of Social Welfare located?" → RAG
-"How many widows benefited from the 2021 amendment?" → RAG
-"What is the notification number of DSSY scheme?" → RAG
-"What did the CAG audit find about DSSY in 2008?" → RAG
-"Which schemes were amalgamated into DSSY?" → RAG
-"What is the Griha Aadhar scheme and how is it related to DSSY?" → RAG
-"Can children receive DSSY if parents are already beneficiaries?" → RAG
-"Can a disabled person continue DSSY after marriage?" → RAG
-"What is the medical assistance for senior citizens?" → RAG
-"How much can a disabled person claim for aids and appliances?" → RAG
-"What happened to DSSY payments before ECS was introduced?" → RAG
-"What is the registration fee for DSSY?" → RAG
-"What happens if Life Certificate is not submitted?" → RAG
-"What are the DSSY amendment changes in 2021?" → RAG
-"Can both husband and wife receive DSSY?" → RAG
 "What is the difference between DSSY and DDSSY?" → RAG
-"Can a divorced woman apply for DSSY?" → RAG
-"What is the residency requirement for DSSY?" → RAG
-"Who approves DSSY applications?" → RAG
-"How is DSSY payment made to beneficiaries?" → RAG
-"Show all categories ranked by active beneficiary count ascending" → SQL
-"Show inactive beneficiaries count by category" → SQL
-"Show year wise beneficiary registration trend" → SQL
-"Total disbursed amount per fiscal year from payment batches" → SQL
-"Total disbursement amount this fiscal year" → SQL
-"Year wise registration trend" → SQL
-"Inactive beneficiaries by category" → SQL
-"Which category has the lowest number of beneficiaries" → SQL
-"Category-wise male vs female count" → SQL
-"Deceased beneficiaries count by category and district" → SQL
-"New beneficiaries registered in the last 6 months by category" → SQL
-"Payment failure rate by month for last 12 months" → SQL
-"Pending payments count and amount this month" → SQL
-"Average payment amount per beneficiary by category" → SQL
-"Year-on-year payment growth percentage" → SQL
-"Failed payments by district" → SQL
-"Life certificate compliance rate by year" → SQL
-"Late life certificate submissions by taluka" → SQL
-"Compare North Goa vs South Goa beneficiary count and payout" → SQL
-"Taluka-wise payment failure rate" → SQL
-"District-wise category breakdown" → SQL
-"List inactive beneficiaries by district" → SQL
-"Category-wise beneficiary breakdown" → SQL
-"What is the gender-wise breakdown of beneficiaries?" → SQL
-"Show age group distribution of beneficiaries" → SQL
-"Payment compliance status summary" → SQL
-"Category-wise average age of beneficiaries" → SQL
-"Show category-wise beneficiary distribution" → SQL
-"How many beneficiaries are above 80 years old?" → SQL
-"Female beneficiaries count by district" → SQL
-"How many deceased beneficiaries are recorded?" → SQL
+"What did the CAG audit find?" → RAG
+"Can a divorced woman apply?" → RAG
 
 Reply ONLY with SQL or RAG.
 
@@ -862,18 +616,17 @@ def build_sql_prompt(question: str, context: list[ConversationTurn] = None) -> s
     """Generate PostgreSQL SQL. Prior SQL context is passed as a follow-up hint."""
     prior_hint = ""
     if context:
-        # Find the most recent SQL turn and surface it as continuity context
-        sql_turns = [t for t in context if t.intent == "SQL"]
-        if sql_turns:
-            last = sql_turns[-1]
-            data_hint = ""
-            if last.sql_data:
-                data_hint = f"\n      Previous data returned: {json.dumps(last.sql_data, default=str)}"
-            prior_hint = (
-                f"FOLLOW-UP CONTEXT: The user's previous question was: \"{last.resolved_question}\""
-                f"{data_hint}\n"
-                f"The current question may be a follow-up. Apply any implied filters or scope from above if needed.\n\n"
-            )
+        # Surface recent analytical turns as continuity context
+        analytical = [t for t in context if t.intent in ("SQL", "RAG")]
+        if analytical:
+            lines = ["FOLLOW-UP CONTEXT (recent conversation — use to understand what the user is looking at):"]
+            for t in analytical[-3:]:  # last 3 turns max
+                lines.append(f"  User asked: \"{t.resolved_question}\"")
+                lines.append(f"  Answer: {t.answer[:200]}")
+                if t.sql_data:
+                    lines.append(f"  Data returned: {json.dumps(t.sql_data[:10], default=str)}")
+            lines.append("The current question may be a follow-up. Apply any implied filters, categories, or scope from above.\n")
+            prior_hint = "\n".join(lines) + "\n"
 
     return f"""{SCHEMA}
 

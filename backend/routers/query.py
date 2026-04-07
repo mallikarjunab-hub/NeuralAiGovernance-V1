@@ -29,7 +29,11 @@ from backend.services.gemini_service import (
 )
 from backend.config import settings
 import httpx
-from backend.services.rag_service import search as rag_search
+from backend.services.rag_service import (
+    search as rag_search,
+    extract_direct_answer,
+    HIGH_CONFIDENCE, MEDIUM_CONFIDENCE,
+)
 from backend.services.cache import get_cached, set_cached
 from backend.services.context_store import context_store
 
@@ -41,23 +45,62 @@ logger = logging.getLogger(__name__)
 
 async def _try_rag(question: str, language: str, start: float,
                    context=None) -> QueryResponse | None:
-    """Attempt RAG search on Neon. Returns QueryResponse if good match, else None."""
+    """
+    Tiered RAG with Gemini cost optimization:
+      HIGH   (>= 0.55): direct-answer chunk → return immediately (ZERO Gemini cost)
+      MEDIUM (>= 0.25): decent match → Gemini synthesizes answer from chunks (1 API call)
+      LOW    (< 0.25):  weak match → return None (caller falls back to web search)
+    """
     try:
         async with neon_session_context() as neon_db:
             chunks = await rag_search(neon_db, question, top_k=8)
             relevant = [c for c in chunks if c["similarity"] >= 0.15] or chunks[:4]
             if not relevant:
                 return None
-            answer = await rag_answer(question, [c["text"] for c in relevant], language, context)
-            # Only discard if answer says "not available" AND best match is very weak
-            if "not available" in answer.lower() and relevant[0]["similarity"] < 0.17:
-                return None
-            return QueryResponse(
-                question=question, answer=answer, intent="RAG",
-                row_count=0,
-                execution_time_ms=int((time.time() - start) * 1000),
-                confidence="high" if relevant[0]["similarity"] > 0.55 else "medium",
+
+            best_score = relevant[0]["similarity"]
+
+            # ── TIER 1: HIGH confidence — direct answer, skip Gemini ──
+            if best_score >= HIGH_CONFIDENCE:
+                direct = extract_direct_answer(relevant, question)
+                if direct:
+                    logger.info(
+                        "RAG TIER-1 (direct, no Gemini): score=%.3f | Q: %s",
+                        best_score, question[:60],
+                    )
+                    return QueryResponse(
+                        question=question, answer=direct, intent="RAG",
+                        row_count=0,
+                        execution_time_ms=int((time.time() - start) * 1000),
+                        confidence="high",
+                    )
+                # High score but not a direct-answer chunk → fall through to Gemini synthesis
+
+            # ── TIER 2: MEDIUM confidence — Gemini synthesis from chunks ──
+            if best_score >= MEDIUM_CONFIDENCE:
+                answer = await rag_answer(
+                    question, [c["text"] for c in relevant], language, context
+                )
+                if "not available" in answer.lower() and best_score < 0.30:
+                    return None  # Gemini couldn't answer either → let web search try
+                logger.info(
+                    "RAG TIER-2 (Gemini synthesis): score=%.3f | Q: %s",
+                    best_score, question[:60],
+                )
+                return QueryResponse(
+                    question=question, answer=answer, intent="RAG",
+                    row_count=0,
+                    execution_time_ms=int((time.time() - start) * 1000),
+                    confidence="high" if best_score > 0.55 else "medium",
+                )
+
+            # ── TIER 3: LOW confidence — not worth Gemini call ──
+            logger.info(
+                "RAG TIER-3 (low confidence, skipping Gemini): score=%.3f | Q: %s",
+                best_score, question[:60],
             )
+            return None
+
     except Exception as e:
         logger.warning(f"RAG fallback failed: {e}")
         return None
@@ -355,51 +398,38 @@ async def transcribe(
 @router.get("/suggestions")
 async def suggestions():
     return {"categories": {
-        "📊 Data Queries": [
-            "How many total beneficiaries are there in DSSY?",
-            "Show taluka-wise active beneficiary count",
-            "Compare North Goa vs South Goa beneficiaries",
-            "What is the gender-wise breakdown of beneficiaries?",
-            "Which taluka has the most Senior Citizen beneficiaries?",
-            "What is the total monthly payout for active beneficiaries?",
-            "Show category-wise beneficiary distribution",
-            "How many beneficiaries are above 80 years old?",
-            "List inactive beneficiaries by district",
-            "Show age group distribution of beneficiaries",
-            "Female beneficiaries count by district",
-            "Payment compliance status summary",
-            "How many widow beneficiaries are there?",
-            "How many deceased beneficiaries are recorded?",
+        "📊 Beneficiary Data": [
+            "How many total beneficiaries are there?",
+            "Break down beneficiaries by category",
+            "Compare North Goa and South Goa",
+            "Which category has the least beneficiaries?",
+            "Show taluka-wise count for North Goa",
+            "How many widows are there?",
+            "Male vs female breakdown",
+            "Age distribution of beneficiaries",
+            "How many are above 80 years old?",
+            "Inactive beneficiaries by district",
+        ],
+        "💰 Payments & Trends": [
+            "Compare payments across last 3 years",
+            "Monthly payment trend for 2024",
+            "Which district has the most failed payments?",
+            "Year-wise registration trend",
+            "Total monthly payout for all active beneficiaries",
+            "New registrations in the last 6 months",
+            "Life certificate compliance by taluka",
+            "Payment batch summary",
         ],
         "📋 Scheme Information": [
-            "Who is eligible for DSSY benefits?",
-            "What documents are required to apply for DSSY?",
-            "How much pension do widows receive under DSSY?",
-            "What is the financial assistance for disabled persons?",
+            "Who is eligible for DSSY?",
+            "What documents are needed to apply?",
+            "How much pension do widows get?",
             "What is the Life Certificate requirement?",
-            "When was DSSY launched?",
             "What is the difference between DSSY and DDSSY?",
-            "Can both husband and wife receive DSSY?",
-            "What are the cancellation rules for DSSY?",
-            "What is the registration fee for DSSY?",
-            "How is DSSY payment made to beneficiaries?",
+            "Can both husband and wife get DSSY?",
+            "What are the cancellation rules?",
             "What happens if Life Certificate is not submitted?",
-            "What are the DSSY amendment changes in 2021?",
-            "What is the residency requirement for DSSY?",
-            "Can a divorced woman apply for DSSY?",
-            "What is the income limit to qualify for DSSY?",
-            "Who approves DSSY applications?",
-            "Can a disabled person continue DSSY after marriage?",
-            "What is the medical assistance for senior citizens?",
-            "How much can a disabled person claim for aids and appliances?",
-            "What happened to DSSY payments before ECS was introduced?",
-            "What did the CAG audit find about DSSY in 2008?",
-            "Which schemes were amalgamated into DSSY?",
-            "What is the Griha Aadhar scheme and how is it related to DSSY?",
-            "Can children receive DSSY if parents are already beneficiaries?",
-            "What is the notification number of DSSY scheme?",
-            "How many widows benefited from the 2021 amendment?",
-            "Where is the Department of Social Welfare located?",
-            "What was the original pension amount when DSSY started?",
+            "What is the income limit for DSSY?",
+            "Which schemes were merged into DSSY?",
         ],
     }}

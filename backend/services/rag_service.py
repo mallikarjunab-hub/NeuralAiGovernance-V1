@@ -104,13 +104,13 @@ async def setup(db):
             created_at     TIMESTAMP DEFAULT NOW()
         )
     """))
-    for stmt in [
-        "ALTER TABLE document_chunks ADD COLUMN IF NOT EXISTS search_vector tsvector",
-    ]:
-        try:
-            await db.execute(text(stmt))
-        except Exception:
-            pass
+    # search_vector column may already exist (as regular or generated) — skip if present
+    try:
+        await db.execute(text(
+            "ALTER TABLE document_chunks ADD COLUMN IF NOT EXISTS search_vector tsvector"
+        ))
+    except Exception:
+        pass
     for idx_sql in [
         "CREATE INDEX IF NOT EXISTS doc_chunks_emb_idx ON document_chunks USING ivfflat (embedding vector_cosine_ops) WITH (lists=50)",
         "CREATE INDEX IF NOT EXISTS doc_chunks_search_idx ON document_chunks USING gin (search_vector)",
@@ -123,12 +123,23 @@ async def setup(db):
     logger.info("Neon pgvector + full-text search ready")
 
 
-async def is_ingested(db, name: str) -> bool:
+async def is_ingested(db, name: str, min_chunks: int = 10) -> bool:
+    """Check if a document has been properly ingested with enough chunks."""
     r = await db.execute(
         text("SELECT COUNT(*) FROM document_chunks WHERE doc_name=:n"),
         {"n": name}
     )
-    return (r.scalar() or 0) > 0
+    count = r.scalar() or 0
+    if 0 < count < min_chunks:
+        logger.warning(
+            "Document '%s' has only %d chunks (minimum %d) — likely partial ingestion, will re-ingest",
+            name, count, min_chunks,
+        )
+        # Clean up partial ingestion
+        await db.execute(text("DELETE FROM document_chunks WHERE doc_name=:n"), {"n": name})
+        await db.commit()
+        return False
+    return count >= min_chunks
 
 
 async def ingest(db, name: str, content: str, meta: dict = None):
@@ -136,24 +147,35 @@ async def ingest(db, name: str, content: str, meta: dict = None):
     logger.info(f"Ingesting {len(chunks)} chunks for '{name}'")
     import json as _json
     meta_str = _json.dumps(meta or {})
+    success, failed = 0, 0
     for i, c in enumerate(chunks):
         if not c.strip():
             continue
-        emb = await embed_text(c)
-        emb_s = "[" + ",".join(str(x) for x in emb) + "]"
-        await db.execute(
-            text(
-                "INSERT INTO document_chunks "
-                "(doc_name, chunk_index, chunk_text, embedding, metadata, search_vector) "
-                "VALUES (:name, :idx, :chunk, :emb::vector, :meta::jsonb, "
-                "to_tsvector('english', :chunk))"
-            ),
-            {"name": name, "idx": i, "chunk": c, "emb": emb_s, "meta": meta_str},
-        )
-        if (i + 1) % 5 == 0:
-            logger.info(f"  Ingested {i+1}/{len(chunks)} chunks...")
+        try:
+            emb = await embed_text(c)
+            emb_s = "[" + ",".join(str(x) for x in emb) + "]"
+            await db.execute(
+                text(
+                    "INSERT INTO document_chunks "
+                    "(doc_name, chunk_index, chunk_text, embedding, metadata) "
+                    "VALUES (:name, :idx, :chunk, CAST(:emb AS vector), CAST(:meta AS jsonb))"
+                ),
+                {"name": name, "idx": i, "chunk": c, "emb": emb_s, "meta": meta_str},
+            )
+            success += 1
+        except Exception as e:
+            failed += 1
+            logger.warning(f"  Chunk {i} insert failed (skipping): {e}")
+            # Rollback the failed statement so the transaction stays usable
+            try:
+                await db.rollback()
+            except Exception:
+                pass
+            continue
+        if success % 5 == 0:
+            logger.info(f"  Ingested {success}/{len(chunks)} chunks...")
     await db.commit()
-    logger.info(f"Ingested {len(chunks)} chunks for '{name}'")
+    logger.info(f"Ingested {success}/{len(chunks)} chunks for '{name}' ({failed} failed)")
 
 
 async def search(db, query: str, top_k: int = TOP_K_DEFAULT) -> list[dict]:
@@ -167,6 +189,65 @@ async def search(db, query: str, top_k: int = TOP_K_DEFAULT) -> list[dict]:
         f"→ {len(merged)} merged | '{query[:50]}'"
     )
     return merged
+
+
+# ── Confidence tiers for Gemini-free direct answers ────────────────────────
+# HIGH  (>= 0.55): best chunk is a strong match → extract direct answer, skip Gemini
+# MEDIUM (>= 0.25): decent match → needs Gemini synthesis from multiple chunks
+# LOW   (< 0.25): weak match → Gemini synthesis, then web search fallback
+
+HIGH_CONFIDENCE  = 0.55
+MEDIUM_CONFIDENCE = 0.25
+
+
+def extract_direct_answer(chunks: list[dict], query: str) -> str | None:
+    """
+    If the top chunk is a synthetic [DIRECT ANSWER] block with high similarity,
+    extract and return its content directly — zero Gemini cost.
+
+    Returns the cleaned answer text, or None if no direct answer is suitable.
+    """
+    if not chunks:
+        return None
+
+    best = chunks[0]
+    if best["similarity"] < HIGH_CONFIDENCE:
+        return None
+
+    text = best["text"]
+
+    # Only auto-extract from synthetic direct-answer chunks (they are pre-written
+    # to be user-facing quality). Section chunks need Gemini synthesis.
+    if not text.startswith("[DIRECT ANSWER:"):
+        # Also accept section chunks with very high similarity (>= 0.72)
+        # where a single chunk clearly answers the question
+        if best["similarity"] >= 0.72 and len(chunks) >= 1:
+            return _format_section_chunk(text, query)
+        return None
+
+    # Strip the [DIRECT ANSWER: ...] header line
+    lines = text.split("\n", 1)
+    body = lines[1].strip() if len(lines) > 1 else text
+
+    # Clean up formatting for user display
+    body = body.replace("  ", " ").strip()
+
+    logger.info("Direct answer extracted (similarity=%.3f) — zero Gemini cost", best["similarity"])
+    return body
+
+
+def _format_section_chunk(text: str, query: str) -> str | None:
+    """Format a high-confidence section chunk for direct display."""
+    # Strip [SECTION: ...] header
+    if text.startswith("[SECTION:"):
+        lines = text.split("\n", 1)
+        text = lines[1].strip() if len(lines) > 1 else text
+
+    # Only return if the chunk is reasonably sized (not a huge wall of text)
+    if len(text) > 2000:
+        return None
+
+    return text
 
 
 async def _vector_search(db, query: str, top_k: int = 12) -> list[dict]:
@@ -210,13 +291,14 @@ async def _keyword_search(db, query: str, top_k: int = 12) -> list[dict]:
         results = []
 
         # BM25-style: ts_rank_cd with cover density
+        # Use to_tsvector() inline — works whether search_vector column is populated or not
         ts_query = " | ".join(set(words[:10]))
         try:
             sql = (
                 f"SELECT id, doc_name, chunk_text, "
-                f"ts_rank_cd(search_vector, to_tsquery('english', '{ts_query}'), 32) AS rank "
+                f"ts_rank_cd(to_tsvector('english', chunk_text), to_tsquery('english', '{ts_query}'), 32) AS rank "
                 f"FROM document_chunks "
-                f"WHERE search_vector @@ to_tsquery('english', '{ts_query}') "
+                f"WHERE to_tsvector('english', chunk_text) @@ to_tsquery('english', '{ts_query}') "
                 f"ORDER BY rank DESC LIMIT {top_k}"
             )
             r = await db.execute(text(sql))

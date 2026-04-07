@@ -104,7 +104,15 @@ class neon_session_context:
             if exc_type:
                 await self._session.rollback()
             else:
-                await self._session.commit()
+                try:
+                    await self._session.commit()
+                except Exception:
+                    # Session may be in a bad state (e.g. PendingRollbackError
+                    # from a prior failed operation) — rollback to clean up
+                    try:
+                        await self._session.rollback()
+                    except Exception:
+                        pass
         finally:
             await self._session.close()
 

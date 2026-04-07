@@ -184,12 +184,6 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
 .pb:disabled{opacity:.4;cursor:not-allowed}
 @media(max-width:1100px){.kpi-row{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:800px){.ch2{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr 1fr}.cstrip{grid-template-columns:1fr 1fr}.chat-wrap{grid-template-columns:1fr}.chat-side{display:none}.main{padding:14px}}
-.pbi-wrap{width:100%;height:1650px;border-radius:12px;overflow:hidden;border:1px solid #c7d9f5;background:#fff;box-shadow:0 1px 4px rgba(0,53,128,.08),0 4px 16px rgba(0,53,128,.06)}
-.pbi-wrap iframe{width:100%;height:1650px;border:none;display:block}
-.dash-seg{display:flex;border:1.5px solid var(--b1);border-radius:8px;overflow:hidden;flex-shrink:0}
-.seg-btn{padding:6px 16px;border:none;background:#fff;color:var(--b1);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s;white-space:nowrap}
-.seg-btn.active{background:var(--b1);color:#fff}
-.seg-btn:not(:last-child){border-right:1.5px solid var(--b1)}
 /* ── Date Filter Bar ─────────────────────────────────────────── */
 .dfb{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:10px 16px;margin-bottom:16px;box-shadow:var(--sh)}
 .dfb-left{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
@@ -211,6 +205,30 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
 .nlp-btn{padding:7px 20px;background:var(--b1);color:#fff;border:none;border-radius:7px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s;white-space:nowrap;display:flex;align-items:center;gap:6px}
 .nlp-btn:hover{background:var(--b2)}
 .nlp-btn:disabled{opacity:.5;cursor:not-allowed}
+.nlp-mic{width:38px;height:38px;background:var(--b5);border:1.5px solid var(--border);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s;flex-shrink:0;color:var(--b2)}
+.nlp-mic:hover{background:var(--b4);border-color:var(--b3)}
+/* ── Google-style Mic Overlay ────────────────────────────────── */
+.mic-overlay{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;background:rgba(0,20,60,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);flex-direction:column;gap:24px;animation:micFadeIn .25s ease}
+.mic-overlay.open{display:flex}
+@keyframes micFadeIn{from{opacity:0}to{opacity:1}}
+.mic-orb{position:relative;width:120px;height:120px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.mic-orb-core{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#ea4335,#d93025);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 24px rgba(234,67,53,.4);transition:transform .2s;z-index:2}
+.mic-orb-core:hover{transform:scale(1.06)}
+.mic-orb-core svg{width:34px;height:34px;stroke:#fff;fill:none}
+.mic-ring{position:absolute;inset:0;border-radius:50%;border:2.5px solid rgba(234,67,53,.35);animation:micRingPulse 1.8s ease-out infinite}
+.mic-ring:nth-child(2){inset:-14px;animation-delay:.4s;border-color:rgba(234,67,53,.2)}
+.mic-ring:nth-child(3){inset:-28px;animation-delay:.8s;border-color:rgba(234,67,53,.1)}
+@keyframes micRingPulse{0%{transform:scale(.85);opacity:1}100%{transform:scale(1.15);opacity:0}}
+.mic-overlay-label{color:#fff;font-size:16px;font-weight:600;letter-spacing:.3px;text-align:center;line-height:1.5}
+.mic-overlay-sub{color:rgba(255,255,255,.6);font-size:12px;margin-top:2px}
+.mic-overlay-cancel{padding:10px 28px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:24px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;backdrop-filter:blur(4px)}
+.mic-overlay-cancel:hover{background:rgba(255,255,255,.22);border-color:rgba(255,255,255,.35)}
+/* Overlay processing state */
+.mic-overlay.processing .mic-orb-core{background:linear-gradient(135deg,var(--b2),var(--b3))}
+.mic-overlay.processing .mic-ring{border-color:rgba(0,71,173,.25);animation-name:micRingProcess}
+.mic-overlay.processing .mic-ring:nth-child(2){border-color:rgba(0,71,173,.15)}
+.mic-overlay.processing .mic-ring:nth-child(3){border-color:rgba(0,71,173,.08)}
+@keyframes micRingProcess{0%{transform:scale(.95);opacity:.8}50%{transform:scale(1.05);opacity:.4}100%{transform:scale(.95);opacity:.8}}
 .nlp-status{font-size:11.5px;color:var(--text3);margin-bottom:12px;min-height:18px;display:flex;align-items:center;gap:8px}
 .nlp-ans-card{background:var(--b5);border:1px solid var(--border2);border-radius:10px;padding:14px 18px;margin-bottom:16px;font-size:13.5px;color:var(--text);line-height:1.65;display:none}
 .nlp-ans-card.show{display:block}
@@ -224,6 +242,38 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
 .nlp-chip-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
 .nlp-chip{padding:6px 14px;background:var(--b5);border:1px solid var(--border2);border-radius:20px;font-size:12px;color:var(--b2);cursor:pointer;font-family:inherit;font-weight:600;transition:all .15s;white-space:nowrap}
 .nlp-chip:hover{background:var(--b4);border-color:var(--b2)}
+/* ── Follow-up Chat Button & Panel ─────────────────────────── */
+.fu-btn{display:none;align-items:center;gap:8px;padding:10px 22px;background:var(--b1);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;margin-top:18px;box-shadow:0 2px 8px rgba(0,53,128,.18)}
+.fu-btn:hover{background:var(--b2);transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,53,128,.22)}
+.fu-btn.show{display:inline-flex}
+.fu-panel{display:none;margin-top:12px;background:var(--white);border:1.5px solid var(--b2);border-radius:var(--r);box-shadow:0 4px 20px rgba(0,53,128,.10);overflow:hidden;animation:fuSlide .25s ease-out}
+.fu-panel.open{display:block}
+@keyframes fuSlide{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fu-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:var(--b5);border-bottom:1px solid var(--border2)}
+.fu-hd-left{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:var(--b1)}
+.fu-hd-dot{width:7px;height:7px;background:var(--b2);border-radius:50%;display:inline-block}
+.fu-hd-ctx{font-size:10.5px;font-weight:500;color:var(--text4);margin-left:6px}
+.fu-close{background:none;border:none;font-size:16px;color:var(--text4);cursor:pointer;padding:2px 6px;border-radius:4px;transition:all .15s}
+.fu-close:hover{background:var(--border2);color:var(--text)}
+.fu-msgs{max-height:360px;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.fu-msgs:empty::after{content:'Ask a follow-up question about the chart above — e.g. "show this by taluka" or "what about inactive ones?"';display:block;text-align:center;color:var(--text4);font-size:12.5px;padding:24px 16px;line-height:1.6}
+.fu-msg{display:flex;gap:10px;align-items:flex-start;max-width:92%}
+.fu-msg.u{align-self:flex-end;flex-direction:row-reverse}
+.fu-msg .fu-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;letter-spacing:.3px}
+.fu-msg.u .fu-av{background:var(--b1);color:#fff}
+.fu-msg.b .fu-av{background:var(--b3);color:#fff}
+.fu-msg .fu-bbl{padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.6;color:var(--text)}
+.fu-msg.u .fu-bbl{background:var(--b1);color:#fff;border-bottom-right-radius:4px}
+.fu-msg.b .fu-bbl{background:var(--b5);border:1px solid var(--border2);border-bottom-left-radius:4px}
+.fu-msg .fu-chart-area{margin-top:10px;background:var(--b6);border:1px solid var(--border2);border-radius:8px;padding:12px}
+.fu-msg .fu-chart-area canvas{max-height:200px}
+.fu-foot{padding:10px 16px;border-top:1px solid var(--border2);background:var(--b6)}
+.fu-irow{display:flex;gap:8px;align-items:center}
+.fu-inp{flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:22px;font-size:13px;outline:none;font-family:'DM Sans',sans-serif;background:#fff;color:var(--text);transition:border-color .18s}
+.fu-inp:focus{border-color:var(--b2)}
+.fu-send{width:38px;height:38px;background:var(--b1);color:#fff;border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s;flex-shrink:0}
+.fu-send:hover{background:var(--b2);transform:scale(1.06)}
+.fu-send:disabled{opacity:.4;cursor:not-allowed;transform:none}
 </style>
 </head>
 <body>
@@ -267,10 +317,6 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
       <div class="dash-meta">
         <span class="upd-lbl" id="dashUpd">Loading…</span>
         <button class="ref-btn" onclick="loadDash()">↻ Refresh</button>
-        <div class="dash-seg">
-          <button class="seg-btn active" id="segCharts" onclick="toggleDash('custom')">Charts</button>
-          <button class="seg-btn" id="segPBI" onclick="toggleDash('pbi')">Power BI</button>
-        </div>
       </div>
     </div>
 
@@ -407,29 +453,6 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
 
     </div><!-- end dash-custom -->
 
-    <div id="dash-pbi" style="display:none">
-      <div class="dash-hdr">
-        <div class="dash-title">
-          📊 DSSY Power BI Dashboard
-          <span class="live-badge"><span class="live-dot"></span>Live</span>
-        </div>
-        <div class="dash-meta">
-          <div class="dash-seg">
-            <button class="seg-btn active" id="segCharts2" onclick="toggleDash('custom')">Charts</button>
-            <button class="seg-btn" id="segPBI2" onclick="toggleDash('pbi')">Power BI</button>
-          </div>
-        </div>
-      </div>
-      <div class="pbi-wrap">
-        <iframe
-          id="pbiFrame"
-          title="neural_poc_final"
-          data-src="https://app.powerbi.com/view?r=eyJrIjoiMThlMWViOGMtZWEzMi00YTc1LTkyYjQtY2QwNmFjN2ZkMzk3IiwidCI6IjhlNDU1OTYxLTRiZjMtNGYwMi05M2Q0LWE2NzFmMmYxMWNmOSJ9&pageName=2e9b44fcf3b3b4922153"
-          style="width:100%;height:1650px;border:none;"
-          frameborder="0" allowFullScreen="true">
-        </iframe>
-      </div>
-    </div><!-- end dash-pbi -->
 
   </div><!-- end v-dash -->
 
@@ -451,46 +474,44 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       </span>
       <input class="nlp-inp" id="nlpInp" type="text" placeholder="e.g. Show me category-wise breakdown, or compare district counts, or payment trend last 3 years…" autocomplete="off"/>
+      <button class="nlp-mic" id="dynMicBtn" onclick="dynMicStart()" title="Voice input">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+          <line x1="12" y1="19" x2="12" y2="23"/>
+          <line x1="8" y1="23" x2="16" y2="23"/>
+        </svg>
+      </button>
       <button class="nlp-btn" id="nlpBtn" onclick="nlpQuery()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         Analyse
       </button>
     </div>
 
-    <!-- Quick suggestion chips — all backed by real schema data -->
+    <!-- Quick suggestion chips -->
     <div class="nlp-chip-row">
-      <button class="nlp-chip" onclick="nlpSet('Category-wise beneficiary breakdown')">Category breakdown</button>
-      <button class="nlp-chip" onclick="nlpSet('District-wise active beneficiaries')">District comparison</button>
-      <button class="nlp-chip" onclick="nlpSet('Taluka-wise active beneficiaries in North Goa')">North Goa talukas</button>
-      <button class="nlp-chip" onclick="nlpSet('Taluka-wise active beneficiaries in South Goa')">South Goa talukas</button>
-      <button class="nlp-chip" onclick="nlpSet('Age group distribution of active beneficiaries')">Age distribution</button>
-      <button class="nlp-chip" onclick="nlpSet('Gender breakdown of active beneficiaries')">Gender split</button>
-      <button class="nlp-chip" onclick="nlpSet('Compare payments 2023 vs 2024 vs 2025 with paid failed pending count and total amount')">Payment trend 3yr</button>
-      <button class="nlp-chip" onclick="nlpSet('Monthly payment trend for 2024')">Monthly payments 2024</button>
-      <button class="nlp-chip" onclick="nlpSet('Show all categories ranked by active beneficiary count ascending')">Lowest category</button>
-      <button class="nlp-chip" onclick="nlpSet('Show inactive beneficiaries count by category')">Inactive by category</button>
-      <button class="nlp-chip" onclick="nlpSet('Show year wise beneficiary registration trend')">Registration trend</button>
-      <button class="nlp-chip" onclick="nlpSet('Total active vs inactive vs deceased beneficiaries')">Active vs Inactive vs Deceased</button>
-      <button class="nlp-chip" onclick="nlpSet('Senior citizen beneficiaries above age 80')">Senior citizens 80+</button>
-      <button class="nlp-chip" onclick="nlpSet('Widow beneficiaries by taluka')">Widows by taluka</button>
-      <button class="nlp-chip" onclick="nlpSet('New beneficiaries registered in the last 6 months by category')">New registrations (6m)</button>
-      <button class="nlp-chip" onclick="nlpSet('Category-wise average age of beneficiaries')">Avg age by category</button>
-      <button class="nlp-chip" onclick="nlpSet('Deceased beneficiaries count by category and district')">Deceased by category & district</button>
-      <button class="nlp-chip" onclick="nlpSet('Category-wise male vs female count')">Male vs Female by category</button>
-      <button class="nlp-chip" onclick="nlpSet('Total disbursed amount per fiscal year from payment batches')">Total FY disbursement</button>
-      <button class="nlp-chip" onclick="nlpSet('Category-wise monthly payout amount')">Category-wise payout</button>
-      <button class="nlp-chip" onclick="nlpSet('District-wise total payment disbursement last year')">District-wise disbursement</button>
-      <button class="nlp-chip" onclick="nlpSet('Payment failure rate by month for last 12 months')">Monthly failure rate</button>
-      <button class="nlp-chip" onclick="nlpSet('Pending payments count and amount this month')">Pending payments</button>
-      <button class="nlp-chip" onclick="nlpSet('Average payment amount per beneficiary by category')">Avg payment per beneficiary</button>
-      <button class="nlp-chip" onclick="nlpSet('Year-on-year payment growth percentage')">YoY payment growth</button>
-      <button class="nlp-chip" onclick="nlpSet('Failed payments by district')">Failed payments by district</button>
-      <button class="nlp-chip" onclick="nlpSet('Payment batch summary last 6 months')">Batch summary (6m)</button>
-      <button class="nlp-chip" onclick="nlpSet('Life certificate compliance rate by year')">Life cert compliance</button>
-      <button class="nlp-chip" onclick="nlpSet('Late life certificate submissions by taluka')">Late submissions by taluka</button>
-      <button class="nlp-chip" onclick="nlpSet('Compare North Goa vs South Goa beneficiary count and payout')">North vs South Goa</button>
-      <button class="nlp-chip" onclick="nlpSet('Taluka-wise payment failure rate')">Taluka failure rates</button>
-      <button class="nlp-chip" onclick="nlpSet('District-wise category breakdown')">District x Category</button>
+      <button class="nlp-chip" onclick="nlpSet('Break down beneficiaries by category')">Category breakdown</button>
+      <button class="nlp-chip" onclick="nlpSet('Compare North Goa and South Goa')">North vs South Goa</button>
+      <button class="nlp-chip" onclick="nlpSet('Show talukas in North Goa')">North Goa talukas</button>
+      <button class="nlp-chip" onclick="nlpSet('Show talukas in South Goa')">South Goa talukas</button>
+      <button class="nlp-chip" onclick="nlpSet('Age distribution')">Age distribution</button>
+      <button class="nlp-chip" onclick="nlpSet('Male vs female breakdown')">Gender split</button>
+      <button class="nlp-chip" onclick="nlpSet('Compare payments last 3 years')">Payment trend 3yr</button>
+      <button class="nlp-chip" onclick="nlpSet('Monthly payments for 2024')">Monthly 2024</button>
+      <button class="nlp-chip" onclick="nlpSet('Which category has the least beneficiaries?')">Lowest category</button>
+      <button class="nlp-chip" onclick="nlpSet('Inactive beneficiaries by category')">Inactive by category</button>
+      <button class="nlp-chip" onclick="nlpSet('Year-wise registration trend')">Registration trend</button>
+      <button class="nlp-chip" onclick="nlpSet('Active vs inactive vs deceased count')">Status breakdown</button>
+      <button class="nlp-chip" onclick="nlpSet('Senior citizens above 80 years old')">Senior citizens 80+</button>
+      <button class="nlp-chip" onclick="nlpSet('Widow count by taluka')">Widows by taluka</button>
+      <button class="nlp-chip" onclick="nlpSet('New registrations in the last 6 months')">New registrations</button>
+      <button class="nlp-chip" onclick="nlpSet('Average age by category')">Avg age by category</button>
+      <button class="nlp-chip" onclick="nlpSet('Male vs female count by category')">Gender by category</button>
+      <button class="nlp-chip" onclick="nlpSet('Total payout per fiscal year')">FY disbursement</button>
+      <button class="nlp-chip" onclick="nlpSet('Monthly payout by category')">Category-wise payout</button>
+      <button class="nlp-chip" onclick="nlpSet('Failed payments by district')">Failed by district</button>
+      <button class="nlp-chip" onclick="nlpSet('Life certificate compliance by year')">Life cert compliance</button>
+      <button class="nlp-chip" onclick="nlpSet('District and category cross breakdown')">District x Category</button>
     </div>
 
     <!-- Status + answer -->
@@ -507,6 +528,32 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:10px 2
         Type a question or click a chip above — the chart will update automatically based on the data returned.
         <br><br>
         Examples: "category-wise breakdown", "compare North vs South Goa", "payment trend last 3 years", "which taluka has most senior citizens"
+      </div>
+    </div>
+
+    <!-- Follow-up question button — appears after graph generation -->
+    <button class="fu-btn" id="fuBtn" onclick="toggleFollowUp()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Follow-up Question
+    </button>
+
+    <!-- Follow-up chat panel — slides open below the button -->
+    <div class="fu-panel" id="fuPanel">
+      <div class="fu-hd">
+        <div class="fu-hd-left">
+          <span class="fu-hd-dot"></span>Follow-up Chat
+          <span class="fu-hd-ctx">Context: current graph data</span>
+        </div>
+        <button class="fu-close" onclick="toggleFollowUp()">✕</button>
+      </div>
+      <div class="fu-msgs" id="fuMsgs"></div>
+      <div class="fu-foot">
+        <div class="fu-irow">
+          <input class="fu-inp" id="fuInp" type="text" placeholder="Ask a follow-up about this data…" autocomplete="off"/>
+          <button class="fu-send" id="fuSend" onclick="sendFollowUp()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
       </div>
     </div>
   </div><!-- end v-dyn -->
@@ -720,19 +767,6 @@ async function chkHealth() {
   } catch { qs('#sDot').className = 'dot err'; qs('#sLbl').textContent = 'Offline'; }
 }
 
-// ── DASHBOARD TOGGLE ──────────────────────────────────────────────────────────
-function toggleDash(mode) {
-  const showPBI = mode === 'pbi';
-  document.getElementById('dash-custom').style.display = showPBI ? 'none' : '';
-  document.getElementById('dash-pbi').style.display    = showPBI ? ''     : 'none';
-  ['segCharts','segCharts2'].forEach(id => { const el = document.getElementById(id); if(el) el.classList.toggle('active', !showPBI); });
-  ['segPBI','segPBI2'].forEach(id     => { const el = document.getElementById(id); if(el) el.classList.toggle('active',  showPBI); });
-  // Load Power BI iframe src on first click only
-  if (showPBI) {
-    const fr = document.getElementById('pbiFrame');
-    if (fr && !fr.src) fr.src = fr.dataset.src;
-  }
-}
 
 // ── DATE RANGE FILTER ─────────────────────────────────────────────────────────
 function setRange(range) {
@@ -854,7 +888,7 @@ function line(id, labels, data) {
 
 // ── QUERY CHART ───────────────────────────────────────────────────────────────
 let qIdx = 0;
-function buildQueryChart(data, cid) {
+function buildQueryChart(data, cid, hintType) {
   if (!data || data.length < 2) return;
   const cols = Object.keys(data[0]); if (cols.length < 2) return;
   const numCols = cols.filter(c => data.every(r => !isNaN(parseFloat(r[c])) && r[c] !== null && r[c] !== ''));
@@ -863,20 +897,32 @@ function buildQueryChart(data, cid) {
   const lc = lblCols[0], vc = numCols[0];
   const labels = data.map(r => String(r[lc]).length > 18 ? String(r[lc]).slice(0, 16) + '…' : String(r[lc]));
   const values = data.map(r => parseFloat(r[vc]) || 0);
-  const isTime = /month|period|year|date/i.test(lc);
+  const isTime = /month|period|year|date|trend|quarter|week/i.test(lc);
   const isFew = labels.length <= 6;
-  const def = isTime ? 'line' : isFew ? 'doughnut' : 'bar';
-  const cid2 = 'qc_' + qIdx++;
+  const def = hintType || (isTime ? 'line' : isFew ? 'doughnut' : 'bar');
   const wrap = document.getElementById(cid); if (!wrap) return;
-  wrap.innerHTML = `<div class="qchd">
-    <span><strong>${vc.replace(/_/g,' ')}</strong> by <strong>${lc.replace(/_/g,' ')}</strong></span>
-    <div class="qctog">
-      <button class="ctb ${def==='bar'?'on':''}" onclick="swQC('${cid2}','bar',this)">Bar</button>
-      <button class="ctb ${def==='doughnut'?'on':''}" onclick="swQC('${cid2}','doughnut',this)">Donut</button>
-      <button class="ctb ${def==='line'?'on':''}" onclick="swQC('${cid2}','line',this)">Line</button>
-    </div></div>
-    <div class="qch"><canvas id="${cid2}"></canvas></div>`;
-  window._QD = window._QD || {}; window._QD[cid2] = { labels, values }; rQC(cid2, def);
+
+  // Build charts for multiple numeric columns
+  const chartsToRender = numCols.slice(0, 3);
+  let html = '';
+  const chartIds = [];
+  chartsToRender.forEach((vc2, i) => {
+    const id = 'qc_' + qIdx++;
+    chartIds.push({ id, col: vc2 });
+    const vals = data.map(r => parseFloat(r[vc2]) || 0);
+    html += `<div class="qchd">
+      <span><strong>${vc2.replace(/_/g,' ')}</strong> by <strong>${lc.replace(/_/g,' ')}</strong></span>
+      <div class="qctog">
+        <button class="ctb ${def==='bar'?'on':''}" onclick="swQC('${id}','bar',this)">Bar</button>
+        <button class="ctb ${def==='doughnut'?'on':''}" onclick="swQC('${id}','doughnut',this)">Donut</button>
+        <button class="ctb ${def==='line'?'on':''}" onclick="swQC('${id}','line',this)">Line</button>
+      </div></div>
+      <div class="qch"><canvas id="${id}"></canvas></div>`;
+    window._QD = window._QD || {};
+    window._QD[id] = { labels, values: vals };
+  });
+  wrap.innerHTML = html;
+  chartIds.forEach(c => rQC(c.id, def));
 }
 
 function rQC(cid, type) {
@@ -952,8 +998,8 @@ async function doSend() {
     clearTimeout(timeoutId);
     const d = await r.json();
     removeTyping(tid);
-    r.ok ? addBot(d.answer, d.data, d.row_count, d.execution_time_ms, d.intent)
-          : addBot('⚠️ ' + (d.detail || 'An error occurred.'), null, null, null, null);
+    r.ok ? addBot(d.answer, d.data, d.row_count, d.execution_time_ms, d.intent, d.chart_type)
+          : addBot('⚠️ ' + (d.detail || 'An error occurred.'), null, null, null, null, null);
   } catch (err) {
     clearTimeout(timeoutId);
     removeTyping(tid);
@@ -970,7 +1016,7 @@ function addUser(text) {
   scrl();
 }
 
-function addBot(text, data, rowCount, ms, intent) {
+function addBot(text, data, rowCount, ms, intent, chartType) {
   const cid = 'qcwrap_' + Date.now();
   let tbl = '';
   const showTbl = data && data.length > 0 && data.length <= 100;
@@ -987,9 +1033,10 @@ function addBot(text, data, rowCount, ms, intent) {
     else
       badge = `<div class="meta">${rowCount} result${rowCount===1?'':'s'} · ${ms}ms</div>`;
   }
-  const chartDiv = showTbl && data.length > 1 ? `<div class="qcwrap" id="${cid}"></div>` : '';
+  const showChart = showTbl && data.length >= 2;
+  const chartDiv = showChart ? `<div class="qcwrap" id="${cid}"></div>` : '';
   qs('#cMsgs').insertAdjacentHTML('beforeend', `<div class="msg b"><div class="av">AI</div><div style="flex:1;min-width:0"><div class="bbl">${esc(text)}${tbl}${chartDiv}${badge}</div><div class="mtime">${now()}</div></div></div>`);
-  if (showTbl && data.length > 1) buildQueryChart(data, cid);
+  if (showChart) buildQueryChart(data, cid, chartType);
   scrl();
 }
 
@@ -1106,9 +1153,12 @@ async function nlpQuery() {
 
     if (d.data && d.data.length >= 1) {
       renderDynCharts(q, d.data, d.chart_type);
+      showFollowUpBtn();
     } else if (d.intent !== 'RAG') {
       dynArea.innerHTML = `<div class="dyn-empty"><strong>No chart data</strong>The query returned a text answer only. Check the AI Insight above.</div>`;
     }
+    // Show follow-up button for any successful answer (including RAG/text)
+    if (d.answer) showFollowUpBtn();
     document.getElementById('dynUpd').textContent = 'Updated ' + new Date().toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'});
   } catch (e) {
     statusEl.textContent = 'Error: ' + e.message;
@@ -1214,6 +1264,271 @@ function esc(s) {
 function set(id, v) { const e = document.getElementById(id); if (e) e.textContent = v; }
 const qs  = s => document.querySelector(s);
 const qsa = s => document.querySelectorAll(s);
+
+// ── FOLLOW-UP CHAT (Dynamic Dashboard) ───────────────────────────────────────
+let _fuChartIdx = 0;
+const _fuCI = {};
+
+function showFollowUpBtn() {
+  const btn = document.getElementById('fuBtn');
+  if (btn) btn.classList.add('show');
+}
+
+function toggleFollowUp() {
+  const panel = document.getElementById('fuPanel');
+  if (!panel) return;
+  panel.classList.toggle('open');
+  if (panel.classList.contains('open')) {
+    const inp = document.getElementById('fuInp');
+    if (inp) setTimeout(() => inp.focus(), 150);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const fuInp = document.getElementById('fuInp');
+  if (fuInp) fuInp.addEventListener('keydown', e => { if (e.key === 'Enter') sendFollowUp(); });
+});
+
+async function sendFollowUp() {
+  const inp = document.getElementById('fuInp');
+  const q = inp ? inp.value.trim() : '';
+  if (!q) return;
+  inp.value = '';
+
+  const msgs = document.getElementById('fuMsgs');
+  // Add user message
+  msgs.insertAdjacentHTML('beforeend',
+    `<div class="fu-msg u"><div class="fu-av">U</div><div class="fu-bbl">${esc(q)}</div></div>`
+  );
+  msgs.scrollTop = msgs.scrollHeight;
+
+  // Show typing
+  const tid = 'futy_' + Date.now();
+  msgs.insertAdjacentHTML('beforeend',
+    `<div class="fu-msg b" id="${tid}"><div class="fu-av">AI</div><div class="fu-bbl"><span class="tdot"></span><span class="tdot"></span><span class="tdot"></span></div></div>`
+  );
+  msgs.scrollTop = msgs.scrollHeight;
+
+  const sendBtn = document.getElementById('fuSend');
+  sendBtn.disabled = true;
+
+  try {
+    const res = await fetch(`${BASE}/api/query`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: q, language: curLang, include_sql: false, session_id: SESSION_ID })
+    });
+    const d = await res.json();
+    // Remove typing
+    const te = document.getElementById(tid); if (te) te.remove();
+
+    // Build bot response
+    let html = `<div class="fu-bbl">${esc(d.answer || 'No answer returned.')}`;
+
+    // If data returned, show mini table
+    if (d.data && d.data.length > 0 && d.data.length <= 50) {
+      const cols = Object.keys(d.data[0]);
+      html += `<div class="rtwrap" style="margin-top:10px;max-height:180px;overflow-y:auto"><table class="rtbl"><thead><tr>${cols.map(c=>`<th>${esc(c.replace(/_/g,' '))}</th>`).join('')}</tr></thead><tbody>${d.data.map(r=>`<tr>${cols.map(c=>`<td>${esc(String(r[c]??'—'))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+    }
+
+    // If chartable data, add mini chart
+    const cid = 'fuc_' + (++_fuChartIdx);
+    if (d.data && d.data.length >= 2) {
+      const dCols = Object.keys(d.data[0]);
+      const dNum = dCols.filter(c => d.data.every(r => r[c] !== null && r[c] !== '' && !isNaN(parseFloat(r[c]))));
+      const dLbl = dCols.filter(c => !dNum.includes(c));
+      if (dNum.length > 0 && dLbl.length > 0) {
+        html += `<div class="fu-chart-area"><canvas id="${cid}"></canvas></div>`;
+      }
+    }
+
+    if (d.execution_time_ms && d.intent !== 'EDGE' && d.intent !== 'RAG') {
+      html += `<div class="meta">${d.row_count || 0} result${(d.row_count||0)===1?'':'s'} · ${d.execution_time_ms}ms</div>`;
+    }
+    html += `</div>`;
+
+    msgs.insertAdjacentHTML('beforeend',
+      `<div class="fu-msg b"><div class="fu-av">AI</div>${html}</div>`
+    );
+    msgs.scrollTop = msgs.scrollHeight;
+
+    // Render mini chart if we added one
+    if (d.data && d.data.length >= 2) {
+      const canvas = document.getElementById(cid);
+      if (canvas) {
+        const dCols = Object.keys(d.data[0]);
+        const dNum = dCols.filter(c => d.data.every(r => r[c] !== null && r[c] !== '' && !isNaN(parseFloat(r[c]))));
+        const dLbl = dCols.filter(c => !dNum.includes(c));
+        if (dNum.length > 0 && dLbl.length > 0) {
+          const lc = dLbl[0];
+          const vc = dNum[0];
+          const labels = d.data.map(r => String(r[lc]).length > 16 ? String(r[lc]).slice(0,14)+'…' : String(r[lc]));
+          const values = d.data.map(r => parseFloat(r[vc]) || 0);
+          const isTime = /month|year|date|trend|period/i.test(lc) || /year|month|trend/i.test(q);
+          const chartType = d.chart_type || (isTime ? 'line' : d.data.length <= 6 ? 'doughnut' : 'bar');
+          try {
+            if (_fuCI[cid]) { _fuCI[cid].destroy(); }
+            _fuCI[cid] = new Chart(canvas, {
+              type: chartType,
+              data: {
+                labels: labels,
+                datasets: [{
+                  label: vc.replace(/_/g, ' '),
+                  data: values,
+                  backgroundColor: chartType === 'line'
+                    ? 'rgba(0,53,128,.12)'
+                    : PAL.slice(0, values.length),
+                  borderColor: chartType === 'line' ? PAL[0] : PAL.slice(0, values.length),
+                  borderWidth: chartType === 'line' ? 2 : 1,
+                  fill: chartType === 'line',
+                  tension: 0.35,
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: chartType === 'doughnut', position: 'right', labels: { boxWidth: 10, font: { size: 10 } } } },
+                scales: chartType === 'doughnut' ? {} : {
+                  y: { beginAtZero: true, ticks: { font: { size: 10 } } },
+                  x: { ticks: { font: { size: 10 }, maxRotation: 45 } }
+                }
+              }
+            });
+          } catch(e) { console.warn('Follow-up chart error:', e); }
+        }
+      }
+    }
+
+    // Also update the main AI insight and dynamic charts
+    if (d.answer) {
+      const mainAnsText = document.getElementById('nlpAnsText');
+      const mainAnsCard = document.getElementById('nlpAnsCard');
+      if (mainAnsText) mainAnsText.innerHTML = esc(d.answer);
+      if (mainAnsCard) mainAnsCard.classList.add('show');
+    }
+    if (d.data && d.data.length >= 1) {
+      renderDynCharts(q, d.data, d.chart_type);
+      // Update status bar
+      const statusEl = document.getElementById('nlpStatus');
+      if (statusEl) {
+        statusEl.textContent = d.row_count
+          ? `${d.row_count} result${d.row_count === 1 ? '' : 's'} · ${d.execution_time_ms}ms`
+          : '';
+      }
+    }
+
+  } catch (err) {
+    const te = document.getElementById(tid); if (te) te.remove();
+    msgs.insertAdjacentHTML('beforeend',
+      `<div class="fu-msg b"><div class="fu-av">AI</div><div class="fu-bbl">Connection error. Please try again.</div></div>`
+    );
+    msgs.scrollTop = msgs.scrollHeight;
+  } finally {
+    sendBtn.disabled = false;
+  }
+}
+</script>
+
+<!-- Google-style Mic Overlay -->
+<div class="mic-overlay" id="dynMicOverlay">
+  <div class="mic-orb" onclick="dynMicStop()">
+    <div class="mic-ring"></div>
+    <div class="mic-ring"></div>
+    <div class="mic-ring"></div>
+    <div class="mic-orb-core">
+      <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+        <line x1="12" y1="19" x2="12" y2="23"/>
+        <line x1="8" y1="23" x2="16" y2="23"/>
+      </svg>
+    </div>
+  </div>
+  <div class="mic-overlay-label" id="dynMicLabel">
+    Listening…
+    <div class="mic-overlay-sub">Tap the mic or press Esc to stop</div>
+  </div>
+  <button class="mic-overlay-cancel" onclick="dynMicCancel()">Cancel</button>
+</div>
+
+<script>
+// ── Dynamic Dashboard Mic (Google-style overlay) ────────────────────────────
+let _dynRec = null, _dynChunks = [], _dynRecording = false;
+
+async function dynMicStart() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    _dynChunks = [];
+    _dynRec = new MediaRecorder(stream);
+    _dynRec.ondataavailable = e => { if (e.data.size > 0) _dynChunks.push(e.data); };
+    _dynRec.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop());
+      const blob = new Blob(_dynChunks, { type: 'audio/webm' });
+      await _dynTranscribe(blob);
+    };
+    _dynRec.start();
+    _dynRecording = true;
+    const ov = document.getElementById('dynMicOverlay');
+    ov.classList.add('open');
+    ov.classList.remove('processing');
+    document.getElementById('dynMicLabel').innerHTML = 'Listening…<div class="mic-overlay-sub">Tap the mic or press Esc to stop</div>';
+  } catch(e) {
+    alert('Microphone permission denied. Please allow microphone access.');
+  }
+}
+
+function dynMicStop() {
+  if (!_dynRecording) return;
+  _dynRecording = false;
+  const ov = document.getElementById('dynMicOverlay');
+  ov.classList.add('processing');
+  document.getElementById('dynMicLabel').innerHTML = 'Processing…<div class="mic-overlay-sub">Transcribing your voice</div>';
+  if (_dynRec && _dynRec.state !== 'inactive') _dynRec.stop();
+}
+
+function dynMicCancel() {
+  _dynRecording = false;
+  if (_dynRec && _dynRec.state !== 'inactive') {
+    _dynRec.ondataavailable = null;
+    _dynRec.onstop = () => { _dynRec.stream.getTracks().forEach(t => t.stop()); };
+    _dynRec.stop();
+  }
+  document.getElementById('dynMicOverlay').classList.remove('open', 'processing');
+}
+
+async function _dynTranscribe(blob) {
+  if (blob.size > 5 * 1024 * 1024) {
+    document.getElementById('dynMicLabel').innerHTML = 'Recording too long<div class="mic-overlay-sub">Please keep it under 2 minutes</div>';
+    setTimeout(() => document.getElementById('dynMicOverlay').classList.remove('open', 'processing'), 1800);
+    return;
+  }
+  try {
+    const form = new FormData();
+    form.append('audio', blob, 'audio.webm');
+    form.append('language', 'en-IN');
+    const res = await fetch(`${BASE}/api/query/transcribe`, { method: 'POST', body: form });
+    const data = await res.json();
+    document.getElementById('dynMicOverlay').classList.remove('open', 'processing');
+    if (data.transcript) {
+      document.getElementById('nlpInp').value = data.transcript;
+      document.getElementById('nlpInp').focus();
+      nlpQuery();
+    } else {
+      document.getElementById('dynMicLabel').innerHTML = 'Could not transcribe<div class="mic-overlay-sub">Please try again</div>';
+      setTimeout(() => document.getElementById('dynMicOverlay').classList.remove('open', 'processing'), 1500);
+    }
+  } catch(e) {
+    document.getElementById('dynMicLabel').innerHTML = 'Transcription failed<div class="mic-overlay-sub">Please try again</div>';
+    setTimeout(() => document.getElementById('dynMicOverlay').classList.remove('open', 'processing'), 1500);
+  }
+}
+
+// Esc key to cancel overlay
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('dynMicOverlay').classList.contains('open')) {
+    dynMicCancel();
+  }
+});
 </script>
 
 </body>
