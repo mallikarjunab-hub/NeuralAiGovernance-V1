@@ -366,3 +366,5 @@ def detect_edge_case(question: str) -> dict | None:
         return {"type": "off_topic", "response": _RESPONSES["off_topic"]}
 
     return None
+
+

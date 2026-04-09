@@ -344,6 +344,13 @@ SQL: SELECT c.category_name AS category, COUNT(*) AS count FROM beneficiaries b 
 Q: taluka wise active beneficiaries
 SQL: SELECT t.taluka_name AS taluka, d.district_name AS district, COUNT(*) AS count FROM beneficiaries b JOIN talukas t ON b.taluka_id = t.taluka_id JOIN districts d ON b.district_id = d.district_id WHERE b.status='Active' GROUP BY t.taluka_name, d.district_name ORDER BY count DESC;
 
+Q: talukawise breakdown beneficiaries
+SQL: SELECT t.taluka_name AS taluka, c.category_name AS category, COUNT(*) AS count FROM beneficiaries b JOIN talukas t ON b.taluka_id = t.taluka_id JOIN categories c ON b.category_id = c.category_id WHERE b.status='Active' GROUP BY t.taluka_name, c.category_name ORDER BY t.taluka_name, count DESC;
+-- NOTE: This returns all 7 categories (Senior Citizen, Widow, Single Woman, Disabled 40%, Disabled 80%, Disabled 90%, HIV/AIDS) for every taluka. Render as both a pivot table and a stacked bar chart with taluka on x-axis and category as stack.
+
+Q: give talukawise breakdown beneficiaries
+SQL: SELECT t.taluka_name AS taluka, c.category_name AS category, COUNT(*) AS count FROM beneficiaries b JOIN talukas t ON b.taluka_id = t.taluka_id JOIN categories c ON b.category_id = c.category_id WHERE b.status='Active' GROUP BY t.taluka_name, c.category_name ORDER BY t.taluka_name, count DESC;
+
 Q: gender breakdown
 SQL: SELECT gender, COUNT(*) AS count FROM beneficiaries WHERE status='Active' GROUP BY gender ORDER BY count DESC;
 
@@ -459,6 +466,32 @@ SQL: SELECT se.enrollment_year AS year, c.category_name AS category, COUNT(DISTI
 
 Q: total enrollments per year all years
 SQL: SELECT se.enrollment_year AS year, COUNT(*) AS enrollments FROM scheme_enrollments se WHERE se.enrollment_year IS NOT NULL GROUP BY se.enrollment_year ORDER BY se.enrollment_year;
+
+-- PATTERN: Year-wise enrollment — category breakdown (queries ii & iii)
+-- Returns chart_type=stacked (year + category + count → 2 label cols, 1 numeric)
+Q: year wise category breakdown of DSSS beneficiary enrollment
+SQL: SELECT se.enrollment_year AS year, c.category_name AS category, COUNT(DISTINCT se.beneficiary_id) AS enrolled FROM scheme_enrollments se JOIN categories c ON se.category_id = c.category_id WHERE se.enrollment_year IS NOT NULL GROUP BY se.enrollment_year, c.category_name ORDER BY se.enrollment_year, enrolled DESC;
+
+Q: year wise category breakdown of enrolled citizens under DSSS
+SQL: SELECT se.enrollment_year AS year, c.category_name AS category, COUNT(DISTINCT se.beneficiary_id) AS enrolled FROM scheme_enrollments se JOIN categories c ON se.category_id = c.category_id WHERE se.enrollment_year IS NOT NULL GROUP BY se.enrollment_year, c.category_name ORDER BY se.enrollment_year, enrolled DESC;
+
+Q: year wise category breakdown of enrolled citizens all years
+SQL: SELECT se.enrollment_year AS year, c.category_name AS category, COUNT(DISTINCT se.beneficiary_id) AS enrolled FROM scheme_enrollments se JOIN categories c ON se.category_id = c.category_id WHERE se.enrollment_year IS NOT NULL GROUP BY se.enrollment_year, c.category_name ORDER BY se.enrollment_year, enrolled DESC;
+
+-- PATTERN: Year-wise enrollment — gender breakdown (query iv)
+-- Returns chart_type=stacked (year + gender + count → 2 label cols, 1 numeric)
+Q: year wise gender breakdown of enrolled citizens under DSSS
+SQL: SELECT se.enrollment_year AS year, b.gender, COUNT(DISTINCT se.beneficiary_id) AS enrolled FROM scheme_enrollments se JOIN beneficiaries b ON se.beneficiary_id = b.beneficiary_id WHERE se.enrollment_year IS NOT NULL GROUP BY se.enrollment_year, b.gender ORDER BY se.enrollment_year, enrolled DESC;
+
+Q: year wise gender breakdown of DSSS beneficiary enrollment
+SQL: SELECT se.enrollment_year AS year, b.gender, COUNT(DISTINCT se.beneficiary_id) AS enrolled FROM scheme_enrollments se JOIN beneficiaries b ON se.beneficiary_id = b.beneficiary_id WHERE se.enrollment_year IS NOT NULL GROUP BY se.enrollment_year, b.gender ORDER BY se.enrollment_year, enrolled DESC;
+
+-- PATTERN: Year-wise enrollment trend (total per year — line chart for all years)
+Q: year wise enrollment trend of DSSS beneficiaries
+SQL: SELECT se.enrollment_year AS year, COUNT(DISTINCT se.beneficiary_id) AS enrollments FROM scheme_enrollments se WHERE se.enrollment_year IS NOT NULL GROUP BY se.enrollment_year ORDER BY se.enrollment_year;
+
+Q: enrollment trend over all years
+SQL: SELECT se.enrollment_year AS year, COUNT(DISTINCT se.beneficiary_id) AS enrollments FROM scheme_enrollments se WHERE se.enrollment_year IS NOT NULL GROUP BY se.enrollment_year ORDER BY se.enrollment_year;
 
 -- PATTERN: Status history / enrollments
 Q: status changes in 2024

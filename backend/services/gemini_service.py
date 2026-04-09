@@ -327,11 +327,16 @@ def suggest_chart(results: list) -> str | None:
     if _is_year_col(lbl[0]) and len(results) > 8:
         return "line"
 
-    # Rule 5: Few categorical rows → doughnut
+    # Rule 5: Cross-breakdown — 2 label cols + 1 numeric col → stacked bar
+    # e.g. taluka+category+count, district+category+count, year+category+count
+    if len(lbl) >= 2 and len(num) == 1:
+        return "stacked"
+
+    # Rule 6: Few categorical rows → doughnut
     if len(results) <= 6:
         return "doughnut"
 
-    # Rule 6: Many categorical rows → bar
+    # Rule 7: Many categorical rows → bar
     return "bar"
 
 

@@ -528,23 +528,6 @@ tfoot.tw-foot td.tw-tot{font-family:'DM Serif Display',serif;font-size:14px;colo
       </div>
     </div>
 
-    <!-- ── State Outlay Banner ─────────────────────────────────────────── -->
-    <div class="outlay-banner">
-      <div class="outlay-ico">
-        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-      </div>
-      <div class="outlay-body">
-        <div class="outlay-tag">State Outlay &nbsp;·&nbsp; March 2026</div>
-        <div class="outlay-title">₹45.26 Crore Disbursed to Over 2.24 Lakh Beneficiaries</div>
-        <div class="outlay-text">As of March 2026, the Government of Goa credited approximately <strong>₹45.26 crore</strong> directly to the accounts of more than <strong>2.24 lakh beneficiaries</strong> enrolled under the Dayanand Social Security Scheme (DSSS) and Griha Aadhar — reaffirming the state's sustained commitment to direct benefit transfers and inclusive social welfare.</div>
-        <div class="outlay-stats">
-          <div class="outlay-stat"><div class="outlay-stat-val">₹45.26 Cr</div><div class="outlay-stat-lbl">Total Outlay</div></div>
-          <div class="outlay-stat"><div class="outlay-stat-val">2.24 L+</div><div class="outlay-stat-lbl">Beneficiaries Covered</div></div>
-          <div class="outlay-stat"><div class="outlay-stat-val">2 Schemes</div><div class="outlay-stat-lbl">DSSS &amp; Griha Aadhar</div></div>
-          <div class="outlay-stat"><div class="outlay-stat-val">12 Talukas</div><div class="outlay-stat-lbl">Across Goa</div></div>
-        </div>
-      </div>
-    </div>
 
     <div class="ch2">
       <div class="cc2">
@@ -1613,49 +1596,122 @@ function addBot(text, data, rowCount, ms, intent, chartType) {
 const _DEMO = {
   talukaData: [
     // North Goa (district_id=1)
-    {taluka:'Tiswadi',     category:'Senior Citizen', count:289}, {taluka:'Tiswadi',     category:'Widow', count:163}, {taluka:'Tiswadi',     category:'Single Woman', count:74}, {taluka:'Tiswadi',     category:'Disabled', count:91},
-    {taluka:'Bardez',      category:'Senior Citizen', count:341}, {taluka:'Bardez',      category:'Widow', count:198}, {taluka:'Bardez',      category:'Single Woman', count:102},{taluka:'Bardez',      category:'Disabled', count:118},
-    {taluka:'Pernem',      category:'Senior Citizen', count:178}, {taluka:'Pernem',      category:'Widow', count:94},  {taluka:'Pernem',      category:'Single Woman', count:41}, {taluka:'Pernem',      category:'Disabled', count:57},
-    {taluka:'Bicholim',    category:'Senior Citizen', count:134}, {taluka:'Bicholim',    category:'Widow', count:71},  {taluka:'Bicholim',    category:'Single Woman', count:28}, {taluka:'Bicholim',    category:'Disabled', count:39},
-    {taluka:'Satari',      category:'Senior Citizen', count:112}, {taluka:'Satari',      category:'Widow', count:59},  {taluka:'Satari',      category:'Single Woman', count:21}, {taluka:'Satari',      category:'Disabled', count:31},
-    {taluka:'Ponda',       category:'Senior Citizen', count:223}, {taluka:'Ponda',       category:'Widow', count:148}, {taluka:'Ponda',       category:'Single Woman', count:65}, {taluka:'Ponda',       category:'Disabled', count:84},
+    {taluka:'Tiswadi',     category:'Senior Citizen', count:289}, {taluka:'Tiswadi',     category:'Widow', count:163}, {taluka:'Tiswadi',     category:'Single Woman', count:74}, {taluka:'Tiswadi',     category:'Disabled 40%', count:45}, {taluka:'Tiswadi',     category:'Disabled 80%', count:27}, {taluka:'Tiswadi',     category:'Disabled 90%', count:19}, {taluka:'Tiswadi',     category:'HIV/AIDS', count:48},
+    {taluka:'Bardez',      category:'Senior Citizen', count:341}, {taluka:'Bardez',      category:'Widow', count:198}, {taluka:'Bardez',      category:'Single Woman', count:102},{taluka:'Bardez',      category:'Disabled 40%', count:59}, {taluka:'Bardez',      category:'Disabled 80%', count:35}, {taluka:'Bardez',      category:'Disabled 90%', count:24}, {taluka:'Bardez',      category:'HIV/AIDS', count:62},
+    {taluka:'Pernem',      category:'Senior Citizen', count:178}, {taluka:'Pernem',      category:'Widow', count:94},  {taluka:'Pernem',      category:'Single Woman', count:41}, {taluka:'Pernem',      category:'Disabled 40%', count:28}, {taluka:'Pernem',      category:'Disabled 80%', count:17}, {taluka:'Pernem',      category:'Disabled 90%', count:12}, {taluka:'Pernem',      category:'HIV/AIDS', count:30},
+    {taluka:'Bicholim',    category:'Senior Citizen', count:134}, {taluka:'Bicholim',    category:'Widow', count:71},  {taluka:'Bicholim',    category:'Single Woman', count:28}, {taluka:'Bicholim',    category:'Disabled 40%', count:19}, {taluka:'Bicholim',    category:'Disabled 80%', count:12}, {taluka:'Bicholim',    category:'Disabled 90%', count:8},  {taluka:'Bicholim',    category:'HIV/AIDS', count:21},
+    {taluka:'Satari',      category:'Senior Citizen', count:112}, {taluka:'Satari',      category:'Widow', count:59},  {taluka:'Satari',      category:'Single Woman', count:21}, {taluka:'Satari',      category:'Disabled 40%', count:16}, {taluka:'Satari',      category:'Disabled 80%', count:9},  {taluka:'Satari',      category:'Disabled 90%', count:6},  {taluka:'Satari',      category:'HIV/AIDS', count:17},
+    {taluka:'Ponda',       category:'Senior Citizen', count:223}, {taluka:'Ponda',       category:'Widow', count:148}, {taluka:'Ponda',       category:'Single Woman', count:65}, {taluka:'Ponda',       category:'Disabled 40%', count:42}, {taluka:'Ponda',       category:'Disabled 80%', count:25}, {taluka:'Ponda',       category:'Disabled 90%', count:17}, {taluka:'Ponda',       category:'HIV/AIDS', count:44},
     // South Goa (district_id=2)
-    {taluka:'Salcete',     category:'Senior Citizen', count:412}, {taluka:'Salcete',     category:'Widow', count:267}, {taluka:'Salcete',     category:'Single Woman', count:121},{taluka:'Salcete',     category:'Disabled', count:153},
-    {taluka:'Mormugao',    category:'Senior Citizen', count:267}, {taluka:'Mormugao',    category:'Widow', count:189}, {taluka:'Mormugao',    category:'Single Woman', count:87}, {taluka:'Mormugao',    category:'Disabled', count:109},
-    {taluka:'Quepem',      category:'Senior Citizen', count:186}, {taluka:'Quepem',      category:'Widow', count:112}, {taluka:'Quepem',      category:'Single Woman', count:49}, {taluka:'Quepem',      category:'Disabled', count:67},
-    {taluka:'Sanguem',     category:'Senior Citizen', count:158}, {taluka:'Sanguem',     category:'Widow', count:89},  {taluka:'Sanguem',     category:'Single Woman', count:37}, {taluka:'Sanguem',     category:'Disabled', count:51},
-    {taluka:'Canacona',    category:'Senior Citizen', count:143}, {taluka:'Canacona',    category:'Widow', count:76},  {taluka:'Canacona',    category:'Single Woman', count:33}, {taluka:'Canacona',    category:'Disabled', count:45},
-    {taluka:'Dharbandora', category:'Senior Citizen', count:167}, {taluka:'Dharbandora', category:'Widow', count:98},  {taluka:'Dharbandora', category:'Single Woman', count:44}, {taluka:'Dharbandora', category:'Disabled', count:58},
+    {taluka:'Salcete',     category:'Senior Citizen', count:412}, {taluka:'Salcete',     category:'Widow', count:267}, {taluka:'Salcete',     category:'Single Woman', count:121},{taluka:'Salcete',     category:'Disabled 40%', count:76}, {taluka:'Salcete',     category:'Disabled 80%', count:46}, {taluka:'Salcete',     category:'Disabled 90%', count:31}, {taluka:'Salcete',     category:'HIV/AIDS', count:79},
+    {taluka:'Mormugao',    category:'Senior Citizen', count:267}, {taluka:'Mormugao',    category:'Widow', count:189}, {taluka:'Mormugao',    category:'Single Woman', count:87}, {taluka:'Mormugao',    category:'Disabled 40%', count:54}, {taluka:'Mormugao',    category:'Disabled 80%', count:33}, {taluka:'Mormugao',    category:'Disabled 90%', count:22}, {taluka:'Mormugao',    category:'HIV/AIDS', count:57},
+    {taluka:'Quepem',      category:'Senior Citizen', count:186}, {taluka:'Quepem',      category:'Widow', count:112}, {taluka:'Quepem',      category:'Single Woman', count:49}, {taluka:'Quepem',      category:'Disabled 40%', count:33}, {taluka:'Quepem',      category:'Disabled 80%', count:20}, {taluka:'Quepem',      category:'Disabled 90%', count:14}, {taluka:'Quepem',      category:'HIV/AIDS', count:35},
+    {taluka:'Sanguem',     category:'Senior Citizen', count:158}, {taluka:'Sanguem',     category:'Widow', count:89},  {taluka:'Sanguem',     category:'Single Woman', count:37}, {taluka:'Sanguem',     category:'Disabled 40%', count:25}, {taluka:'Sanguem',     category:'Disabled 80%', count:15}, {taluka:'Sanguem',     category:'Disabled 90%', count:11}, {taluka:'Sanguem',     category:'HIV/AIDS', count:27},
+    {taluka:'Canacona',    category:'Senior Citizen', count:143}, {taluka:'Canacona',    category:'Widow', count:76},  {taluka:'Canacona',    category:'Single Woman', count:33}, {taluka:'Canacona',    category:'Disabled 40%', count:22}, {taluka:'Canacona',    category:'Disabled 80%', count:13}, {taluka:'Canacona',    category:'Disabled 90%', count:10}, {taluka:'Canacona',    category:'HIV/AIDS', count:24},
+    {taluka:'Dharbandora', category:'Senior Citizen', count:167}, {taluka:'Dharbandora', category:'Widow', count:98},  {taluka:'Dharbandora', category:'Single Woman', count:44}, {taluka:'Dharbandora', category:'Disabled 40%', count:29}, {taluka:'Dharbandora', category:'Disabled 80%', count:17}, {taluka:'Dharbandora', category:'Disabled 90%', count:12}, {taluka:'Dharbandora', category:'HIV/AIDS', count:31},
   ],
   yearCatData: [
-    {year:'2019', category:'Senior Citizen', count:1452},
-    {year:'2019', category:'Widow',          count:834},
-    {year:'2019', category:'Single Woman',   count:312},
-    {year:'2019', category:'Disabled',       count:487},
-    {year:'2020', category:'Senior Citizen', count:1687},
-    {year:'2020', category:'Widow',          count:967},
-    {year:'2020', category:'Single Woman',   count:378},
-    {year:'2020', category:'Disabled',       count:543},
-    {year:'2021', category:'Senior Citizen', count:1923},
-    {year:'2021', category:'Widow',          count:1123},
-    {year:'2021', category:'Single Woman',   count:445},
-    {year:'2021', category:'Disabled',       count:621},
-    {year:'2022', category:'Senior Citizen', count:2134},
-    {year:'2022', category:'Widow',          count:1256},
-    {year:'2022', category:'Single Woman',   count:512},
-    {year:'2022', category:'Disabled',       count:698},
-    {year:'2023', category:'Senior Citizen', count:2345},
-    {year:'2023', category:'Widow',          count:1389},
-    {year:'2023', category:'Single Woman',   count:578},
-    {year:'2023', category:'Disabled',       count:789},
+    // 2002 – scheme launch year (initial enrollment surge)
+    {year:'2002', category:'Senior Citizen', count:1316}, {year:'2002', category:'Widow', count:728}, {year:'2002', category:'Single Woman', count:280},
+    {year:'2002', category:'Disabled 40%',   count:224},  {year:'2002', category:'Disabled 80%', count:126}, {year:'2002', category:'Disabled 90%', count:70}, {year:'2002', category:'HIV/AIDS', count:56},
+    {year:'2003', category:'Senior Citizen', count:1034}, {year:'2003', category:'Widow', count:572}, {year:'2003', category:'Single Woman', count:220},
+    {year:'2003', category:'Disabled 40%',   count:176},  {year:'2003', category:'Disabled 80%', count:99}, {year:'2003', category:'Disabled 90%', count:55}, {year:'2003', category:'HIV/AIDS', count:44},
+    {year:'2004', category:'Senior Citizen', count:893},  {year:'2004', category:'Widow', count:494}, {year:'2004', category:'Single Woman', count:190},
+    {year:'2004', category:'Disabled 40%',   count:152},  {year:'2004', category:'Disabled 80%', count:86}, {year:'2004', category:'Disabled 90%', count:48}, {year:'2004', category:'HIV/AIDS', count:37},
+    {year:'2005', category:'Senior Citizen', count:799},  {year:'2005', category:'Widow', count:442}, {year:'2005', category:'Single Woman', count:170},
+    {year:'2005', category:'Disabled 40%',   count:136},  {year:'2005', category:'Disabled 80%', count:77}, {year:'2005', category:'Disabled 90%', count:43}, {year:'2005', category:'HIV/AIDS', count:34},
+    {year:'2006', category:'Senior Citizen', count:752},  {year:'2006', category:'Widow', count:416}, {year:'2006', category:'Single Woman', count:160},
+    {year:'2006', category:'Disabled 40%',   count:128},  {year:'2006', category:'Disabled 80%', count:72}, {year:'2006', category:'Disabled 90%', count:40}, {year:'2006', category:'HIV/AIDS', count:32},
+    {year:'2007', category:'Senior Citizen', count:729},  {year:'2007', category:'Widow', count:403}, {year:'2007', category:'Single Woman', count:155},
+    {year:'2007', category:'Disabled 40%',   count:124},  {year:'2007', category:'Disabled 80%', count:70}, {year:'2007', category:'Disabled 90%', count:39}, {year:'2007', category:'HIV/AIDS', count:31},
+    {year:'2008', category:'Senior Citizen', count:714},  {year:'2008', category:'Widow', count:395}, {year:'2008', category:'Single Woman', count:152},
+    {year:'2008', category:'Disabled 40%',   count:122},  {year:'2008', category:'Disabled 80%', count:68}, {year:'2008', category:'Disabled 90%', count:38}, {year:'2008', category:'HIV/AIDS', count:30},
+    {year:'2009', category:'Senior Citizen', count:696},  {year:'2009', category:'Widow', count:385}, {year:'2009', category:'Single Woman', count:148},
+    {year:'2009', category:'Disabled 40%',   count:118},  {year:'2009', category:'Disabled 80%', count:67}, {year:'2009', category:'Disabled 90%', count:37}, {year:'2009', category:'HIV/AIDS', count:30},
+    {year:'2010', category:'Senior Citizen', count:682},  {year:'2010', category:'Widow', count:377}, {year:'2010', category:'Single Woman', count:145},
+    {year:'2010', category:'Disabled 40%',   count:116},  {year:'2010', category:'Disabled 80%', count:65}, {year:'2010', category:'Disabled 90%', count:36}, {year:'2010', category:'HIV/AIDS', count:29},
+    {year:'2011', category:'Senior Citizen', count:648},  {year:'2011', category:'Widow', count:374}, {year:'2011', category:'Single Woman', count:144},
+    {year:'2011', category:'Disabled 40%',   count:115},  {year:'2011', category:'Disabled 80%', count:65}, {year:'2011', category:'Disabled 90%', count:36}, {year:'2011', category:'HIV/AIDS', count:58},
+    {year:'2012', category:'Senior Citizen', count:666},  {year:'2012', category:'Widow', count:385}, {year:'2012', category:'Single Woman', count:148},
+    {year:'2012', category:'Disabled 40%',   count:118},  {year:'2012', category:'Disabled 80%', count:67}, {year:'2012', category:'Disabled 90%', count:37}, {year:'2012', category:'HIV/AIDS', count:59},
+    {year:'2013', category:'Senior Citizen', count:729},  {year:'2013', category:'Widow', count:421}, {year:'2013', category:'Single Woman', count:162}, // 2013 amendment
+    {year:'2013', category:'Disabled 40%',   count:130},  {year:'2013', category:'Disabled 80%', count:73}, {year:'2013', category:'Disabled 90%', count:41}, {year:'2013', category:'HIV/AIDS', count:64},
+    {year:'2014', category:'Senior Citizen', count:788},  {year:'2014', category:'Widow', count:455}, {year:'2014', category:'Single Woman', count:175}, // 2014 amendment
+    {year:'2014', category:'Disabled 40%',   count:140},  {year:'2014', category:'Disabled 80%', count:79}, {year:'2014', category:'Disabled 90%', count:44}, {year:'2014', category:'HIV/AIDS', count:69},
+    {year:'2015', category:'Senior Citizen', count:846},  {year:'2015', category:'Widow', count:489}, {year:'2015', category:'Single Woman', count:188},
+    {year:'2015', category:'Disabled 40%',   count:150},  {year:'2015', category:'Disabled 80%', count:85}, {year:'2015', category:'Disabled 90%', count:47}, {year:'2015', category:'HIV/AIDS', count:75},
+    {year:'2016', category:'Senior Citizen', count:945},  {year:'2016', category:'Widow', count:546}, {year:'2016', category:'Single Woman', count:210}, // 2016 amendment
+    {year:'2016', category:'Disabled 40%',   count:168},  {year:'2016', category:'Disabled 80%', count:95}, {year:'2016', category:'Disabled 90%', count:57}, {year:'2016', category:'HIV/AIDS', count:79},
+    {year:'2017', category:'Senior Citizen', count:1058}, {year:'2017', category:'Widow', count:611}, {year:'2017', category:'Single Woman', count:235},
+    {year:'2017', category:'Disabled 40%',   count:188},  {year:'2017', category:'Disabled 80%', count:106}, {year:'2017', category:'Disabled 90%', count:64}, {year:'2017', category:'HIV/AIDS', count:88},
+    {year:'2018', category:'Senior Citizen', count:1251}, {year:'2018', category:'Widow', count:723}, {year:'2018', category:'Single Woman', count:278},
+    {year:'2018', category:'Disabled 40%',   count:222},  {year:'2018', category:'Disabled 80%', count:125}, {year:'2018', category:'Disabled 90%', count:75}, {year:'2018', category:'HIV/AIDS', count:106},
+    {year:'2019', category:'Senior Citizen', count:1452}, {year:'2019', category:'Widow', count:834}, {year:'2019', category:'Single Woman', count:312},
+    {year:'2019', category:'Disabled 40%',   count:256},  {year:'2019', category:'Disabled 80%', count:140}, {year:'2019', category:'Disabled 90%', count:91}, {year:'2019', category:'HIV/AIDS', count:146},
+    {year:'2020', category:'Senior Citizen', count:1687}, {year:'2020', category:'Widow', count:967}, {year:'2020', category:'Single Woman', count:378},
+    {year:'2020', category:'Disabled 40%',   count:285},  {year:'2020', category:'Disabled 80%', count:156}, {year:'2020', category:'Disabled 90%', count:102}, {year:'2020', category:'HIV/AIDS', count:168},
+    {year:'2021', category:'Senior Citizen', count:1923}, {year:'2021', category:'Widow', count:1123}, {year:'2021', category:'Single Woman', count:445}, // 2021 amendment – major increase
+    {year:'2021', category:'Disabled 40%',   count:326},  {year:'2021', category:'Disabled 80%', count:179}, {year:'2021', category:'Disabled 90%', count:116}, {year:'2021', category:'HIV/AIDS', count:194},
+    {year:'2022', category:'Senior Citizen', count:2134}, {year:'2022', category:'Widow', count:1256}, {year:'2022', category:'Single Woman', count:512},
+    {year:'2022', category:'Disabled 40%',   count:367},  {year:'2022', category:'Disabled 80%', count:201}, {year:'2022', category:'Disabled 90%', count:130}, {year:'2022', category:'HIV/AIDS', count:218},
+    {year:'2023', category:'Senior Citizen', count:2345}, {year:'2023', category:'Widow', count:1389}, {year:'2023', category:'Single Woman', count:578},
+    {year:'2023', category:'Disabled 40%',   count:414},  {year:'2023', category:'Disabled 80%', count:227}, {year:'2023', category:'Disabled 90%', count:148}, {year:'2023', category:'HIV/AIDS', count:246},
+    {year:'2024', category:'Senior Citizen', count:1087}, {year:'2024', category:'Widow', count:634}, {year:'2024', category:'Single Woman', count:245},
+    {year:'2024', category:'Disabled 40%',   count:178},  {year:'2024', category:'Disabled 80%', count:98}, {year:'2024', category:'Disabled 90%', count:62}, {year:'2024', category:'HIV/AIDS', count:104},
+    {year:'2025', category:'Senior Citizen', count:878},  {year:'2025', category:'Widow', count:508}, {year:'2025', category:'Single Woman', count:196},
+    {year:'2025', category:'Disabled 40%',   count:142},  {year:'2025', category:'Disabled 80%', count:78}, {year:'2025', category:'Disabled 90%', count:51}, {year:'2025', category:'HIV/AIDS', count:84},
+  ],
+  yearGenderData: [
+    {year:'2002', gender:'Female', count:1792}, {year:'2002', gender:'Male', count:1008},
+    {year:'2003', gender:'Female', count:1408}, {year:'2003', gender:'Male', count:792},
+    {year:'2004', gender:'Female', count:1216}, {year:'2004', gender:'Male', count:684},
+    {year:'2005', gender:'Female', count:1088}, {year:'2005', gender:'Male', count:612},
+    {year:'2006', gender:'Female', count:1024}, {year:'2006', gender:'Male', count:576},
+    {year:'2007', gender:'Female', count:992},  {year:'2007', gender:'Male', count:558},
+    {year:'2008', gender:'Female', count:973},  {year:'2008', gender:'Male', count:547},
+    {year:'2009', gender:'Female', count:947},  {year:'2009', gender:'Male', count:533},
+    {year:'2010', gender:'Female', count:928},  {year:'2010', gender:'Male', count:522},
+    {year:'2011', gender:'Female', count:921},  {year:'2011', gender:'Male', count:519},
+    {year:'2012', gender:'Female', count:947},  {year:'2012', gender:'Male', count:533},
+    {year:'2013', gender:'Female', count:1037}, {year:'2013', gender:'Male', count:583},
+    {year:'2014', gender:'Female', count:1120}, {year:'2014', gender:'Male', count:630},
+    {year:'2015', gender:'Female', count:1203}, {year:'2015', gender:'Male', count:677},
+    {year:'2016', gender:'Female', count:1344}, {year:'2016', gender:'Male', count:756},
+    {year:'2017', gender:'Female', count:1504}, {year:'2017', gender:'Male', count:846},
+    {year:'2018', gender:'Female', count:1779}, {year:'2018', gender:'Male', count:1001},
+    {year:'2019', gender:'Female', count:2100}, {year:'2019', gender:'Male', count:1131},
+    {year:'2020', gender:'Female', count:2433}, {year:'2020', gender:'Male', count:1310},
+    {year:'2021', gender:'Female', count:2799}, {year:'2021', gender:'Male', count:1507},
+    {year:'2022', gender:'Female', count:3132}, {year:'2022', gender:'Male', count:1686},
+    {year:'2023', gender:'Female', count:3476}, {year:'2023', gender:'Male', count:1871},
+    {year:'2024', gender:'Female', count:1452}, {year:'2024', gender:'Male', count:817},
+    {year:'2025', gender:'Female', count:1216}, {year:'2025', gender:'Male', count:684},
   ],
   yearBreakup: [
-    {year:'2019', beneficiaries:3085},
-    {year:'2020', beneficiaries:3575},
-    {year:'2021', beneficiaries:4112},
-    {year:'2022', beneficiaries:4600},
-    {year:'2023', beneficiaries:5101},
-    {year:'2024', beneficiaries:2269},
+    {year:'2002', enrollments:2800},
+    {year:'2003', enrollments:2200},
+    {year:'2004', enrollments:1900},
+    {year:'2005', enrollments:1701},
+    {year:'2006', enrollments:1600},
+    {year:'2007', enrollments:1551},
+    {year:'2008', enrollments:1519},
+    {year:'2009', enrollments:1481},
+    {year:'2010', enrollments:1450},
+    {year:'2011', enrollments:1440},
+    {year:'2012', enrollments:1480},
+    {year:'2013', enrollments:1620},
+    {year:'2014', enrollments:1750},
+    {year:'2015', enrollments:1880},
+    {year:'2016', enrollments:2100},
+    {year:'2017', enrollments:2350},
+    {year:'2018', enrollments:2780},
+    {year:'2019', enrollments:3085},
+    {year:'2020', enrollments:3575},
+    {year:'2021', enrollments:4112},
+    {year:'2022', enrollments:4600},
+    {year:'2023', enrollments:5101},
+    {year:'2024', enrollments:2408},
+    {year:'2025', enrollments:1937},
   ],
   categoryBreakup: [
     {category:'Senior Citizen', beneficiaries:8245},
@@ -1685,12 +1741,22 @@ const _DEMO = {
 
 function _demoMatch(q) {
   if (/total.*(amount|disburs)|disburs.*total|amount.*disburs/i.test(q)) return 'disbursed';
-  if (/give year.?wise category breakdown|(year.?wise.*category.*breakdown)/i.test(q)) return 'year_cat';
+  // year-wise gender breakdown — catch before generic gender_breakup
+  if (/year.?wise.*gender.*(breakdown|breakup)|gender.*(breakdown|breakup).*year.?wise/i.test(q)) return 'gender_breakup';
+  // year-wise category breakdown of enrolled citizens (query iii) — same data as year_cat
+  if (/year.?wise.*category.*(breakdown|breakup).*(enrolled|citizen)|enrolled.*(citizen|beneficiar).*year.?wise.*category/i.test(q)) return 'cat_breakup';
+  // year+category cross-breakdown (must come before year_breakup)
+  if (/give year.?wise category breakdown|(year.?wise.*category.*breakdown)|(year.?wise.*and.*category.?wise)/i.test(q)) return 'year_cat';
+  // year-wise enrollment trend (total per year) — line chart
+  if (/year.?wise.*enroll.*trend|year.?wise.*trend.*enroll|enroll.*trend.*year/i.test(q)) return 'year_trend';
   if (/year.?wise.*breakup|breakup.*year.?wise/i.test(q) && !/category/i.test(q))  return 'year_breakup';
-  if (/taluka.*breakdown.*beneficiar|taluka.?wise.*beneficiar/i.test(q))            return 'taluka';
-  if (/how many citizens enrolled|citizens enrolled|total.*enrolled.*citizens|enrolled.*citizens/i.test(q)) return 'enrolled';
-  if (/category.?wise.*breakup|breakup.*category.?wise/i.test(q))                  return 'cat_breakup';
-  if (/gender.?wise.*breakup|breakup.*gender.?wise/i.test(q))                      return 'gender_breakup';
+  // taluka-wise (handle both "taluka" and "taluk")
+  if (/taluk.{0,2}(wise|.?wise).*beneficiar|taluk.{0,2}(wise|.?wise).*breakdown|taluk.{0,2}.*breakdown.*beneficiar/i.test(q)) return 'taluka';
+  // category/gender breakup or distribution — must come BEFORE enrolled
+  if (/category.?wise.*(breakup|breakdown|distribution)|give.*category.?wise.*(breakup|breakdown|distribution)/i.test(q)) return 'cat_breakup';
+  if (/gender.?wise.*(breakup|breakdown|distribution)|give.*gender.?wise.*(breakup|breakdown|distribution)/i.test(q))     return 'gender_breakup';
+  // enrolled total — match various phrasings
+  if (/how many.*(citizen|beneficiar).*(enrolled|registered)|total.*(enrolled|registered).*(citizen|beneficiar)|(citizen|beneficiar).*(enrolled|registered).*(scheme|dssy|dsss)|(enrolled|registered).*(citizen|beneficiar)|citizens enrolled/i.test(q)) return 'enrolled';
   if (/list.*beneficiar.*category|beneficiar.*under.*category/i.test(q))           return 'list_category';
   return null;
 }
@@ -1735,8 +1801,8 @@ function handleDemoQuery(q) {
       const data = _DEMO.talukaData;
       const {labels, datasets} = pivotStackedBar(data, 'taluka', 'category', 'count');
       return {
-        text: 'Taluka-wise breakdown of DSSS beneficiaries across all categories:',
-        table: _demoTable(data),
+        text: 'Taluka-wise breakdown of DSSS beneficiaries across all 7 categories:',
+        table: buildPivotTable(data, 'taluka', 'category', 'count'),
         chart: {type:'stacked', labels, datasets, title:'Beneficiaries by Taluka & Category'},
         chips: [{label:'Show year-wise breakdown', fill:'Give year-wise category breakdown'}],
       };
@@ -1746,10 +1812,10 @@ function handleDemoQuery(q) {
       const data = _DEMO.yearCatData;
       const {labels, datasets} = pivotStackedBar(data, 'year', 'category', 'count');
       return {
-        text: 'Year-wise category breakdown of DSSS beneficiary enrollment:',
-        table: _demoTable(data),
-        chart: {type:'stacked', labels, datasets, title:'Beneficiaries by Year & Category'},
-        chips: null,
+        text: 'Year-wise category breakdown of DSSS beneficiary enrollment (2002–2025, all 7 categories):',
+        table: buildPivotTable(data, 'year', 'category', 'count'),
+        chart: {type:'stacked', labels, datasets, title:'Enrollment by Year & Category (2002–2025)'},
+        chips: [{label:'Gender breakdown by year', fill:'Year-wise gender breakdown of enrolled citizens under DSSS'}],
       };
     }
 
@@ -1758,10 +1824,11 @@ function handleDemoQuery(q) {
         text: 'Total citizens enrolled under the Dayanand Social Security Scheme (DSSS):\n\n**18,742 beneficiaries**\n\nAll registered beneficiaries across all categories and districts in Goa.',
         table: null, chart: null,
         chips: [
-          {label:'Year-wise breakup',                    fill:'Give year-wise breakup of enrolled citizens'},
-          {label:'Category-wise breakup',                fill:'Give category-wise breakup of enrolled citizens'},
-          {label:'Gender-wise breakup',                  fill:'Give gender-wise breakup of enrolled citizens'},
-          {label:'List of beneficiaries under a category', fill:'List beneficiaries under a category'},
+          {label:'Taluka-wise breakdown',               fill:'Show the taluka-wise breakdown of beneficiaries under the scheme.'},
+          {label:'Year & Category breakdown',           fill:'Provide a year-wise and category-wise breakdown of beneficiaries.'},
+          {label:'Category-wise distribution',          fill:'Show the category-wise distribution of enrolled beneficiaries.'},
+          {label:'Gender-wise breakup',                 fill:'Give gender-wise breakup of enrolled citizens'},
+          {label:'List beneficiaries by category',      fill:'List beneficiaries under a category'},
         ],
       };
 
@@ -1769,30 +1836,46 @@ function handleDemoQuery(q) {
       const data = _DEMO.yearBreakup;
       const {labels, datasets} = pivotStackedBar(_DEMO.yearCatData, 'year', 'category', 'count');
       return {
-        text: 'Year-wise enrollment breakup of DSSS beneficiaries:',
+        text: 'Year-wise enrollment breakup of DSSS beneficiaries (2002–2025, all years since scheme inception):',
         table: _demoTable(data),
-        chart: {type:'stacked', labels, datasets, title:'Year-wise Enrollment by Category'},
-        chips: null,
+        chart: {type:'stacked', labels, datasets, title:'Enrollment by Year & Category (2002–2025)'},
+        chips: [{label:'Category breakdown by year', fill:'Year-wise category breakdown of DSSS beneficiary enrollment'}],
+      };
+    }
+
+    case 'year_trend': {
+      const data = _DEMO.yearBreakup;
+      const tblHtml = _demoTable(data);
+      // Line chart: year on x-axis, total enrollments on y-axis
+      const lineLabels   = data.map(r => r.year);
+      const lineDatasets = [{ label:'New Enrollments', values: data.map(r => r.enrollments) }];
+      return {
+        text: 'Year-wise DSSS enrollment trend (2002–2025) — new beneficiary enrollments per year:\n\nNotable peaks at scheme launch (2002) and post-2021 amendment. Partial-year data shown for 2024–2025.',
+        table: tblHtml,
+        chart: {type:'line', labels:lineLabels, datasets:lineDatasets, title:'DSSS Enrollment Trend (2002–2025)'},
+        chips: [{label:'Category breakdown by year', fill:'Year-wise category breakdown of DSSS beneficiary enrollment'}],
       };
     }
 
     case 'cat_breakup': {
-      const data = _DEMO.categoryBreakup;
+      const data = _DEMO.yearCatData;
+      const {labels, datasets} = pivotStackedBar(data, 'year', 'category', 'count');
       return {
-        text: 'Category-wise breakup of enrolled citizens under DSSS:',
-        table: _demoTable(data),
-        chart: {type:'bar', labels:data.map(r=>r.category), values:data.map(r=>r.beneficiaries), title:'Enrollment by Category'},
-        chips: null,
+        text: 'Year-wise category breakdown of enrolled citizens under DSSS (2002–2025, all 7 categories):',
+        table: buildPivotTable(data, 'year', 'category', 'count'),
+        chart: {type:'stacked', labels, datasets, title:'Enrollment by Year & Category (2002–2025)'},
+        chips: [{label:'Gender breakdown by year', fill:'Year-wise gender breakdown of enrolled citizens under DSSS'}],
       };
     }
 
     case 'gender_breakup': {
-      const data = _DEMO.genderBreakup;
+      const data = _DEMO.yearGenderData;
+      const {labels, datasets} = pivotStackedBar(data, 'year', 'gender', 'count');
       return {
-        text: 'Gender-wise breakup of enrolled citizens under DSSS:',
-        table: _demoTable(data),
-        chart: {type:'bar', labels:data.map(r=>r.gender), values:data.map(r=>r.beneficiaries), title:'Enrollment by Gender'},
-        chips: null,
+        text: 'Year-wise gender breakdown of enrolled citizens under DSSS (2002–2025):',
+        table: buildPivotTable(data, 'year', 'gender', 'count'),
+        chart: {type:'stacked', labels, datasets, title:'Enrollment by Year & Gender (2002–2025)'},
+        chips: [{label:'Category breakdown by year', fill:'Year-wise category breakdown of enrolled citizens under DSSS'}],
       };
     }
 
@@ -1846,17 +1929,31 @@ function addDemoBot(result) {
   let inner = `<div class="bbl">${esc(result.text)}</div>`;
 
   if (hasChart && hasTable) {
-    // Side-by-side: chart (left) + table (right)
-    inner += `<div class="demo-data-section"><div class="demo-result-sbs">
-      <div class="demo-chart-card">
-        <div class="demo-chart-card-title">${esc(result.chart.title)}</div>
-        <div class="demo-chart-canvas-wrap"><canvas id="${cid}_cv"></canvas></div>
-      </div>
-      <div class="demo-table-card">
-        <div class="demo-table-card-title">Data Table</div>
-        <div class="demo-table-scroll">${result.table}</div>
-      </div>
-    </div></div>`;
+    if (result.chart.type === 'stacked' || result.chart.type === 'line') {
+      // Wide charts (stacked/line) — render vertically (chart then table)
+      inner += `<div class="demo-data-section">
+        <div class="demo-chart-card" style="width:100%">
+          <div class="demo-chart-card-title">${esc(result.chart.title)}</div>
+          <div class="demo-chart-canvas-wrap"><canvas id="${cid}_cv"></canvas></div>
+        </div>
+        <div class="demo-table-card" style="width:100%;margin-top:12px">
+          <div class="demo-table-card-title">Data Table</div>
+          <div class="demo-table-scroll">${result.table}</div>
+        </div>
+      </div>`;
+    } else {
+      // Side-by-side: chart (left) + table (right)
+      inner += `<div class="demo-data-section"><div class="demo-result-sbs">
+        <div class="demo-chart-card">
+          <div class="demo-chart-card-title">${esc(result.chart.title)}</div>
+          <div class="demo-chart-canvas-wrap"><canvas id="${cid}_cv"></canvas></div>
+        </div>
+        <div class="demo-table-card">
+          <div class="demo-table-card-title">Data Table</div>
+          <div class="demo-table-scroll">${result.table}</div>
+        </div>
+      </div></div>`;
+    }
   } else if (hasChart) {
     inner += `<div class="demo-data-section"><div class="demo-chart-card">
       <div class="demo-chart-card-title">${esc(result.chart.title)}</div>
@@ -1882,6 +1979,27 @@ function addDemoBot(result) {
       const c = result.chart;
       if (c.type === 'stacked') {
         requestAnimationFrame(() => stackedBar(`${cid}_cv`, c.labels, c.datasets));
+      } else if (c.type === 'line' && c.datasets) {
+        // Line chart with dataset array (each has .values)
+        kill(`${cid}_cv`);
+        const PAL = ['#1A3D7C','#2E86AB','#A23B72','#F18F01','#C73E1D','#3B1F2B','#44BBA4'];
+        CI[`${cid}_cv`] = new Chart(cv, {
+          type: 'line',
+          data: {
+            labels: c.labels,
+            datasets: c.datasets.map((ds, i) => ({
+              label: ds.label,
+              data: ds.values,
+              borderColor: PAL[i % PAL.length],
+              backgroundColor: PAL[i % PAL.length] + '22',
+              borderWidth: 2.5,
+              pointRadius: 3,
+              fill: true,
+              tension: 0.35,
+            }))
+          },
+          options: { ...AOPT }
+        });
       } else {
         kill(`${cid}_cv`);
         CI[`${cid}_cv`] = new Chart(cv, {
@@ -2079,6 +2197,24 @@ function renderDynCharts(question, data, hintType) {
     return;
   }
 
+  // Handle stacked bar: 2 label cols + 1 numeric col cross-breakdown
+  if (hintType === 'stacked' && lblCols.length >= 2 && numCols.length >= 1) {
+    const xKey  = lblCols[0];
+    const sKey  = lblCols[1];
+    const vKey  = numCols[0];
+    const cid   = `dync_${_dynChartIdx}_0`;
+    const {labels, datasets} = pivotStackedBar(data, xKey, sKey, vKey);
+    const pivotHtml = buildPivotTable(data, xKey, sKey, vKey);
+    dynArea.innerHTML = `<div class="dyn-grid"><div class="dyn-chart-card" style="grid-column:1/-1">
+      <div class="chd"><div class="chd-left"><span class="chd-dot"></span>${vKey.replace(/_/g,' ')} by ${xKey.replace(/_/g,' ')} &amp; ${sKey.replace(/_/g,' ')}</div>
+        <span class="chd-pill">Stacked Bar</span>
+      </div>
+      <div class="chw" style="height:320px"><canvas id="${cid}"></canvas></div>
+    </div></div>${pivotHtml}`;
+    requestAnimationFrame(() => { stackedBar(cid, labels, datasets); _dynCI[cid] = CI[cid]; });
+    return;
+  }
+
   let html = `<div class="dyn-grid">`;
   chartsToRender.forEach((vc, i) => {
     const cid = `dync_${_dynChartIdx}_${i}`;
@@ -2145,6 +2281,40 @@ function buildDynTable(data, fullWidth) {
     <table class="rtbl">
       <thead><tr>${cols.map(c=>`<th>${esc(c.replace(/_/g,' '))}</th>`).join('')}</tr></thead>
       <tbody>${data.map(r=>`<tr>${cols.map(c=>`<td>${esc(String(r[c]??'—'))}</td>`).join('')}</tr>`).join('')}</tbody>
+    </table>
+  </div>`;
+}
+
+function buildPivotTable(data, xKey, sKey, vKey) {
+  if (!data || !data.length) return '';
+  const xVals = [...new Set(data.map(r => r[xKey]))];
+  const sVals = [...new Set(data.map(r => r[sKey]))];
+  const lookup = {};
+  data.forEach(r => { lookup[`${r[xKey]}||${r[sKey]}`] = r[vKey]; });
+  const rowTotals = {};
+  xVals.forEach(x => { rowTotals[x] = sVals.reduce((s,sv) => s + (parseFloat(lookup[`${x}||${sv}`]) || 0), 0); });
+  const colTotals = {};
+  sVals.forEach(sv => { colTotals[sv] = xVals.reduce((s,x) => s + (parseFloat(lookup[`${x}||${sv}`]) || 0), 0); });
+  const grandTotal = xVals.reduce((s,x) => s + rowTotals[x], 0);
+  return `<div class="rtwrap" style="margin-top:16px;overflow-x:auto">
+    <table class="rtbl">
+      <thead><tr>
+        <th>${esc(xKey.replace(/_/g,' '))}</th>
+        ${sVals.map(sv=>`<th>${esc(sv)}</th>`).join('')}
+        <th><strong>Total</strong></th>
+      </tr></thead>
+      <tbody>
+        ${xVals.map(x => `<tr>
+          <td><strong>${esc(String(x))}</strong></td>
+          ${sVals.map(sv => `<td>${esc(String(lookup[`${x}||${sv}`] ?? '—'))}</td>`).join('')}
+          <td><strong>${rowTotals[x].toLocaleString('en-IN')}</strong></td>
+        </tr>`).join('')}
+        <tr style="background:#f0f4ff;font-weight:600">
+          <td><strong>Total</strong></td>
+          ${sVals.map(sv => `<td>${colTotals[sv].toLocaleString('en-IN')}</td>`).join('')}
+          <td><strong>${grandTotal.toLocaleString('en-IN')}</strong></td>
+        </tr>
+      </tbody>
     </table>
   </div>`;
 }

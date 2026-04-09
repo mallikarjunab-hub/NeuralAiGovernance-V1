@@ -233,6 +233,13 @@
   - Base liability (all categories): Over Rs. 84 crore per annum
   - Additional liability (widow increase): Over Rs. 21 crore per annum
 
+  ### Recent Disbursement (March 2026)
+  - Total amount disbursed: ₹45.26 Crore (Rs. 45.26 crore)
+  - Total beneficiaries covered: Over 2.24 lakh (2,24,000+)
+  - Schemes included: DSSS (Dayanand Social Security Scheme) and Griha Aadhar
+  - Coverage: All 12 Talukas across Goa (North Goa and South Goa)
+  - Mode: Direct Benefit Transfer (DBT) to beneficiary bank accounts
+
   ---
 
   ## 9. GOA STATE ADMINISTRATIVE STRUCTURE
@@ -457,6 +464,12 @@
 
   Q: What is the difference between DSSY and DDSSY?
   A: DSSY (Dayanand Social Security Scheme) is a pension/financial assistance scheme. DDSSY (Deen Dayal Swasthya Seva Yojana) is a separate health insurance scheme launched on 30 May 2016.
+
+  Q: What is the total amount disbursed under this scheme?
+  A: As of March 2026, the Government of Goa disbursed ₹45.26 Crore (Rs. 45.26 crore) directly to over 2.24 lakh beneficiaries enrolled under the Dayanand Social Security Scheme (DSSS) and Griha Aadhar, covering all 12 Talukas across Goa.
+
+  Q: How much total money was dispersed for the DSSY scheme?
+  A: The total amount dispersed under DSSY and Griha Aadhar as of March 2026 is ₹45.26 Crore, benefiting over 2.24 lakh (224,000+) beneficiaries across all 12 talukas in Goa via Direct Benefit Transfer.
 
   ---
 

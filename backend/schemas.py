@@ -16,6 +16,6 @@ class QueryResponse(BaseModel):
     row_count:         int                                                              = 0
     execution_time_ms: int                                                              = 0
     confidence:        str                                                              = "high"
-    chart_type:        Optional[Literal["bar","line","doughnut","grouped_bar","forecast"]] = None
+    chart_type:        Optional[Literal["bar","line","doughnut","grouped_bar","forecast","stacked"]] = None
     edge_type:         Optional[str]                                                    = None
     forecast:          Optional[dict[str, Any]]                                         = None
