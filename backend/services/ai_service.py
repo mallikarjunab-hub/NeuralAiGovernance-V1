@@ -441,10 +441,10 @@ async def web_grounded_search(query: str, max_tokens: int = 1024) -> dict:
     url = f"{_BASE}/models/gemini-2.5-flash-lite:generateContent?key={settings.GEMINI_API_KEY}"
     payload = {
         "contents": [{"parts": [{"text": (
-            f"You are a knowledgeable assistant for the DSSY (Dayanand Social Security Scheme) "
+            f"You are a knowledgeable assistant for the DSSS (Dayanand Social Security Scheme) "
             f"of the Government of Goa, India. Answer the following question accurately using "
             f"web search results. Provide specific facts, numbers, and details. "
-            f"If the question is about DSSY, social welfare schemes in Goa, or related government "
+            f"If the question is about DSSS, social welfare schemes in Goa, or related government "
             f"policies, provide a comprehensive answer. Keep the answer concise (2-4 paragraphs).\n\n"
             f"Question: {query}"
         )}]}],

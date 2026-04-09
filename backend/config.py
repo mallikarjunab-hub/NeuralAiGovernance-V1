@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings
 from typing import List
 
 class Settings(BaseSettings):
-    APP_NAME:    str  = "Neural AI Governance – DSSY"
+    APP_NAME:    str  = "Neural AI Governance – DSSS"
     APP_VERSION: str  = "3.0.0"
     ENVIRONMENT: str  = "development"
     DEBUG:       bool = False
@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     NEON_MAX_OVERFLOW:  int = 2
 
     # ── Gemini AI ──────────────────────────────────────────────
-    GEMINI_API_KEY: str = ""
+    GEMINI_API_KEY: str = ""   
 
     # ── App ────────────────────────────────────────────────────
     SECRET_KEY:   str = ""

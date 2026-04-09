@@ -123,13 +123,13 @@ _SUGGESTION_BLOCK = (
     "\n\nYou can ask me things like:\n"
     "  \"How many active beneficiaries are in Bardez taluka?\"\n"
     "  \"Compare North Goa vs South Goa beneficiaries\"\n"
-    "  \"What documents are required to apply for DSSY?\"\n"
+    "  \"What documents are required to apply for DSSS?\"\n"
     "  \"Show category-wise monthly payout\""
 )
 
 _RESPONSES = {
     "greeting": (
-        "Namaste! I'm the DSSY Statistical Analysis Assistant for the "
+        "Namaste! I'm the DSSS Statistical Analysis Assistant for the "
         "Department of Social Welfare, Government of Goa. I can help you with:\n\n"
         "Beneficiary statistics — district, taluka, category-wise counts\n"
         "Scheme information — eligibility, financial assistance, application process\n"
@@ -138,40 +138,40 @@ _RESPONSES = {
     ),
     "identity": (
         "I am the **Neural AI Governance** system — a statistical analysis assistant "
-        "built specifically for the Dayanand Social Security Scheme (DSSY), "
+        "built specifically for the Dayanand Social Security Scheme (DSSS), "
         "Department of Social Welfare, Government of Goa.\n\n"
         "My capabilities:\n"
-        "  Real-time DSSY beneficiary database queries\n"
+        "  Real-time DSSS beneficiary database queries\n"
         "  District, taluka, village, and category-wise analytics\n"
         "  Scheme eligibility, documents, and financial assistance information\n"
         "  Payment compliance and trend analysis\n\n"
-        "I am not a general-purpose chatbot — I'm purpose-built for DSSY governance. "
+        "I am not a general-purpose chatbot — I'm purpose-built for DSSS governance. "
         "How may I help you?"
     ),
     "thanks": (
-        "You're welcome! Feel free to ask any other questions about DSSY "
+        "You're welcome! Feel free to ask any other questions about DSSS "
         "beneficiaries, scheme eligibility, or statistics."
     ),
     "goodbye": (
-        "Thank you for using the DSSY AI Query System. Have a great day! "
+        "Thank you for using the DSSS AI Query System. Have a great day! "
         "You can return anytime for beneficiary statistics or scheme information."
     ),
     "silly": (
         "That's an interesting question, but I'm a **purpose-built assistant** "
-        "for the Dayanand Social Security Scheme (DSSY), Government of Goa — "
+        "for the Dayanand Social Security Scheme (DSSS), Government of Goa — "
         "so general topics are a bit outside my expertise!\n\n"
         "Could you try asking me something like:\n"
         "  \"How many active beneficiaries are in North Goa?\"\n"
         "  \"Show category-wise monthly payout as a chart\"\n"
-        "  \"What are the eligibility criteria for DSSY?\"\n"
+        "  \"What are the eligibility criteria for DSSS?\"\n"
         "  \"Which taluka has the most senior citizens?\"\n\n"
-        "I'd be happy to help with any DSSY statistics or scheme information!"
+        "I'd be happy to help with any DSSS statistics or scheme information!"
     ),
     "profanity": (
         "I understand you may be frustrated, and I'm here to help! "
-        "I specialise in DSSY scheme queries and beneficiary data for the "
+        "I specialise in DSSS scheme queries and beneficiary data for the "
         "Department of Social Welfare, Government of Goa.\n\n"
-        "Let's try again — what would you like to know about DSSY? "
+        "Let's try again — what would you like to know about DSSS? "
         "For example: \"How many beneficiaries are there in South Goa?\" "
         "or \"What documents are required to apply?\""
     ),
@@ -184,7 +184,7 @@ _RESPONSES = {
         "  \"What is the gender-wise breakdown?\"\n"
         "  \"Which category has the highest payout?\"\n\n"
         "**Scheme Information:**\n"
-        "  \"What are the eligibility criteria for DSSY?\"\n"
+        "  \"What are the eligibility criteria for DSSS?\"\n"
         "  \"How much pension do senior citizens receive?\"\n"
         "  \"What documents are needed to apply?\"\n"
         "  \"What is the Life Certificate requirement?\"\n\n"
@@ -192,16 +192,16 @@ _RESPONSES = {
     ),
     "off_topic": (
         "That's a great question — but it's a little outside my area! "
-        "I'm a **DSSY Statistical Analysis Assistant** built exclusively for "
+        "I'm a **DSSS Statistical Analysis Assistant** built exclusively for "
         "the Dayanand Social Security Scheme, Department of Social Welfare, Government of Goa.\n\n"
-        "Could you ask me something related to DSSY? For example:\n\n"
+        "Could you ask me something related to DSSS? For example:\n\n"
         "  \"How many widow beneficiaries are there in Goa?\"\n"
         "  \"Show me a district-wise breakdown with a chart\"\n"
-        "  \"What is the income limit to qualify for DSSY?\"\n"
+        "  \"What is the income limit to qualify for DSSS?\"\n"
         "  \"Which taluka has the highest number of disabled beneficiaries?\"\n"
         "  \"How much pension do senior citizens receive per month?\"\n\n"
         "I can run live database queries, generate visualizations, and answer "
-        "all scheme-related questions. How can I help you with DSSY today?"
+        "all scheme-related questions. How can I help you with DSSS today?"
     ),
 }
 
@@ -217,9 +217,9 @@ def detect_edge_case(question: str) -> dict | None:
 
     ql = q.lower()
 
-    # ── Early exit: clear DSSY analytical intent → skip all edge checks ──
+    # ── Early exit: clear DSSS analytical intent → skip all edge checks ──
     _DSSY_STRONG = [
-        r"\bbeneficiar", r"\btaluka\b", r"\bdistrict\b", r"\bdssy\b",
+        r"\bbeneficiar", r"\btaluka\b", r"\bdistrict\b", r"\bdssy\b", r"\bdsss\b",
         r"\bactive\b", r"\binactive\b", r"\bdeceased\b",
         r"\bpension\b", r"\bpayout\b", r"\bpayment\b",
         r"\bscheme\b", r"\beligib", r"\bwidow", r"\bdisabled\b",
@@ -264,7 +264,7 @@ def detect_edge_case(question: str) -> dict | None:
 
     # ── Meta-conversation passthrough ─────────────────────────
     # Questions about the conversation itself (context-aware) must reach
-    # resolve_question() — they have no DSSY keywords by nature.
+    # resolve_question() — they have no DSSS keywords by nature.
     _META_CONV = [
         r"\b(my|your)\s+(first|last|previous|prior|earlier|last)\s+(question|query|message)",
         r"what\s+did\s+(i|you)\s+(ask|say|answer|tell)",
@@ -279,7 +279,7 @@ def detect_edge_case(question: str) -> dict | None:
 
     # ── Arithmetic / comparison follow-up passthrough ──────────
     # Short follow-ups that reference prior answer numbers via pronouns
-    # ("both", "them", "together", "combined") have no DSSY keywords
+    # ("both", "them", "together", "combined") have no DSSS keywords
     # but must reach resolve_question() to produce coherent answers.
     _FOLLOWUP = [
         # Arithmetic on prior numbers
@@ -319,12 +319,12 @@ def detect_edge_case(question: str) -> dict | None:
     # ── Non-English passthrough ──────────────────────────────────
     # If the question contains significant non-ASCII characters (Hindi,
     # Telugu, Kannada, Marathi, Konkani), let it through — the LLM
-    # understands these languages and can answer DSSY questions in them.
+    # understands these languages and can answer DSSS questions in them.
     non_ascii_count = sum(1 for c in q if ord(c) > 127)
     if non_ascii_count >= 3:
         return None
 
-    # Whitelist: ONLY allow questions related to DSSY context
+    # Whitelist: ONLY allow questions related to DSSS context
     # If none of these words are present — it's off-topic, block it
     dssy_words = [
         # Scheme names
@@ -361,7 +361,7 @@ def detect_edge_case(question: str) -> dict | None:
     ]
     has_dssy_context = any(re.search(w, ql) for w in dssy_words)
 
-    # If question has no DSSY context at all — block it
+    # If question has no DSSS context at all — block it
     if not has_dssy_context:
         return {"type": "off_topic", "response": _RESPONSES["off_topic"]}
 

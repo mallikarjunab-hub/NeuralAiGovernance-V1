@@ -46,6 +46,16 @@ wildly different from these without a clear filter reason):
   Payment batches                      :      72 (one per month, FY 2020-21 → 2025-26)
   Monthly payout (state total)         : ~Rs 65–75 crore per month
   Payment summary table has data for   : 6 years (FY 2020-21 through 2025-26)
+
+OFFICIAL STATE OUTLAY — MARCH 2026 (authoritative government figure):
+  Total disbursed (March 2026)         : ₹45.26 Crore
+  Beneficiaries covered (March 2026)   : 2.24 Lakh+ (2,24,000+)
+  Schemes covered                      : DSSS (Dayanand Social Security Scheme) & Griha Aadhar
+  Talukas covered                      : 12 (all talukas across Goa)
+  Source                               : Directorate of Social Welfare, Government of Goa
+  → When asked "total amount disbursed", "total outlay", "how much was disbursed", or
+    "total amount for this scheme", answer with: ₹45.26 Crore disbursed to over 2.24 lakh
+    beneficiaries under DSSS and Griha Aadhar (March 2026).
   Life certificates                    : ~130,000 rows (years 2022-2025)
 
 ANTI-HALLUCINATION RULES:
@@ -373,6 +383,13 @@ Q: beneficiaries above 80
 SQL: SELECT COUNT(*) AS count FROM beneficiaries WHERE age > 80 AND status='Active';
 
 -- PATTERN: Payout/amount calculations
+Q: total amount disbursed for this scheme
+SQL: SELECT pb.payment_month, pb.payment_year, pb.total_amount AS total_disbursed, pb.paid_count AS beneficiaries_paid, pb.total_beneficiaries FROM payment_batches pb WHERE pb.payment_month = 3 AND pb.payment_year = 2026 AND pb.batch_status = 'Completed' LIMIT 1;
+-- NOTE: If the above returns no data, report the official government figure: ₹45.26 Crore disbursed to 2.24 lakh+ beneficiaries under DSSS and Griha Aadhar for March 2026.
+
+Q: total outlay march 2026
+SQL: SELECT pb.payment_month, pb.payment_year, pb.total_amount AS total_disbursed, pb.paid_count AS beneficiaries_paid FROM payment_batches pb WHERE pb.payment_month = 3 AND pb.payment_year = 2026 AND pb.batch_status = 'Completed' LIMIT 1;
+
 Q: total monthly payout
 SQL: SELECT SUM(c.current_monthly_amount) AS total_monthly_payout FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE b.status='Active';
 
@@ -421,8 +438,27 @@ SQL: SELECT lc.due_year AS year, COUNT(*) AS total_submitted, COUNT(*) FILTER (W
 Q: year wise registration trend
 SQL: SELECT EXTRACT(YEAR FROM b.registration_date)::INT AS year, COUNT(*) AS registrations FROM beneficiaries b WHERE b.registration_date IS NOT NULL GROUP BY year ORDER BY year;
 
+Q: year wise count for disabled 90 percent
+SQL: SELECT EXTRACT(YEAR FROM b.registration_date)::INT AS year, COUNT(*) AS count FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE LOWER(c.category_name) LIKE '%disabled%90%' AND b.registration_date IS NOT NULL GROUP BY year ORDER BY year;
+
+Q: in which year was disabled 90 percent the lowest
+SQL: SELECT EXTRACT(YEAR FROM b.registration_date)::INT AS year, COUNT(*) AS count FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE LOWER(c.category_name) LIKE '%disabled%90%' AND b.registration_date IS NOT NULL GROUP BY year ORDER BY count ASC LIMIT 1;
+
+Q: year wise category wise beneficiary count
+SQL: SELECT EXTRACT(YEAR FROM b.registration_date)::INT AS year, c.category_name AS category, COUNT(*) AS count FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE b.registration_date IS NOT NULL GROUP BY year, c.category_name ORDER BY year, count DESC;
+
 Q: new beneficiaries registered in the last 6 months by category
 SQL: SELECT c.category_name AS category, COUNT(*) AS new_registrations FROM beneficiaries b JOIN categories c ON b.category_id = c.category_id WHERE b.registration_date >= CURRENT_DATE - INTERVAL '6 months' GROUP BY c.category_name ORDER BY new_registrations DESC;
+
+-- PATTERN: Year-wise enrollment breakup
+Q: year wise enrollment breakup of DSSS beneficiaries
+SQL: SELECT se.enrollment_year AS year, COUNT(DISTINCT se.beneficiary_id) AS total_enrolled, COUNT(DISTINCT se.beneficiary_id) FILTER (WHERE se.is_current = TRUE) AS currently_active, COUNT(DISTINCT se.beneficiary_id) FILTER (WHERE se.is_current = FALSE) AS exited FROM scheme_enrollments se WHERE se.enrollment_year IS NOT NULL GROUP BY se.enrollment_year ORDER BY se.enrollment_year;
+
+Q: year wise enrollment breakup by category
+SQL: SELECT se.enrollment_year AS year, c.category_name AS category, COUNT(DISTINCT se.beneficiary_id) AS enrolled FROM scheme_enrollments se JOIN categories c ON se.category_id = c.category_id WHERE se.enrollment_year IS NOT NULL GROUP BY se.enrollment_year, c.category_name ORDER BY se.enrollment_year, enrolled DESC;
+
+Q: total enrollments per year all years
+SQL: SELECT se.enrollment_year AS year, COUNT(*) AS enrollments FROM scheme_enrollments se WHERE se.enrollment_year IS NOT NULL GROUP BY se.enrollment_year ORDER BY se.enrollment_year;
 
 -- PATTERN: Status history / enrollments
 Q: status changes in 2024
@@ -478,6 +514,11 @@ _REASONING = frozenset([
     'what does this mean', 'what does that mean', 'interpret',
     'summarize', 'summarise', 'summary',
     'tell me more', 'elaborate', 'in short', 'in summary',
+    # Follow-up continuation triggers (when prior data exists)
+    'what about', 'and what about', 'how about',
+    'show me only', 'filter by',
+    'break that down', 'break it down',
+    'compare that', 'compare those',
 ])
 
 # Reflective comparison/ranking against PRIOR data shown.
@@ -489,6 +530,12 @@ _REFLECTIVE = frozenset([
     'what is the highest', 'what is the lowest',
     'biggest', 'smallest', 'difference between',
     'top one', 'bottom one', 'best one', 'worst one',
+    # Dimensional "which" patterns — identify specific item from prior data
+    'which year', 'which month', 'which taluka', 'which district', 'which category',
+    'which one', 'which has', 'which had', 'which is',
+    # Superlatives against prior results
+    ' lowest', ' highest', ' most ', ' least ', ' best ', ' worst ',
+    'the lowest', 'the highest', 'the most', 'the least', 'the best', 'the worst',
 ])
 
 # Topic markers that pin a question to a specific data domain. If a follow-up
@@ -572,7 +619,7 @@ def is_reason_question(question: str, context: list[ConversationTurn]) -> bool:
     Returns True when:
       - Prior context exists AND has sql_data to reason about, AND
       - The question is reasoning/reflective (why, explain, which is highest,
-        what does this mean, etc.)
+        which year, lowest, highest, most, least, what about, etc.)
 
     Conservative on purpose: when unsure, return False so we fall back to SQL.
     """
@@ -589,17 +636,36 @@ def is_reason_question(question: str, context: list[ConversationTurn]) -> bool:
 
     q = _norm(question)
 
-    # "why / explain / interpret / summarize" — clearly reasoning.
+    # "why / explain / interpret / summarize / what about / compare that" — clearly reasoning.
     if any(sig in q for sig in _REASONING):
         return True
 
-    # "which is highest/lowest/bigger" — reflective comparison over prior data.
-    # But only if we don't have new topic terms the prior data wouldn't cover.
+    # "which is highest/lowest/bigger / which year / which district / lowest / highest" —
+    # reflective comparison/identification over prior data.
+    # Only if we don't introduce brand-new topics the prior data wouldn't cover.
     if any(sig in q for sig in _REFLECTIVE):
-        q_topics  = {t for t in _TOPIC_TERMS if t in q}
-        ctx_blob  = " ".join(_norm(t.resolved_question) for t in analytical[-3:])
+        # Time-dimension guard: if the question asks "which year" or "which month",
+        # only treat it as REASON if the prior sql_data actually contains a year/month
+        # column. Otherwise the AI cannot answer from prior data and we must fetch SQL.
+        _TIME_DIM_TRIGGERS = ('which year', 'in which year', 'which month', 'in which month')
+        needs_time_col = any(t in q for t in _TIME_DIM_TRIGGERS)
+        if needs_time_col:
+            prior_data_cols: set[str] = set()
+            for t in analytical:
+                if t.sql_data:
+                    for row in t.sql_data[:1]:
+                        prior_data_cols.update(k.lower() for k in row.keys())
+            _YEAR_COLS = {'year', 'payment_year', 'registration_year', 'fiscal_year', 'month', 'payment_month'}
+            if not prior_data_cols.intersection(_YEAR_COLS):
+                # Prior data has no time dimension — must fetch new SQL
+                return False
+
+        q_topics   = {t for t in _TOPIC_TERMS if t in q}
+        ctx_blob   = " ".join(_norm(t.resolved_question) for t in analytical[-3:])
         ctx_topics = {t for t in _TOPIC_TERMS if t in ctx_blob}
-        if not (q_topics - ctx_topics):
+        new_topics = q_topics - ctx_topics
+        # Allow if the question only has 0–1 new topic terms (likely still about prior data)
+        if len(new_topics) <= 1:
             return True
 
     return False
@@ -695,10 +761,27 @@ def build_question_resolver_prompt(question: str, context: list[ConversationTurn
     Key principle: do NOT strip "why", "explain", "which is highest", etc.
     Those words tell us how the user wants the answer shaped — losing them
     is exactly what makes multi-turn feel robotic.
+
+    Fix 2b: Inject prior turn's question, answer AND actual data rows so the
+    resolver can produce precise standalone questions referencing real numbers.
     """
+    # Build a rich context block: compact history + most-recent-turn full data rows
     ctx_block = _fmt_context(context, mode="compact", max_turns=4).rstrip()
 
-    return f"""You rewrite follow-up questions into complete, standalone questions for the DSSY analytics assistant.
+    # Append the most recent analytical turn's actual data rows
+    analytical = [t for t in context if t.intent != "EDGE"]
+    if analytical:
+        last = analytical[-1]
+        if last.sql_data:
+            rows_preview = json.dumps(last.sql_data[:15], default=str)
+            ctx_block += (
+                f"\n\nMOST RECENT TURN DATA (use these actual rows to resolve references):\n"
+                f"Question: {last.resolved_question}\n"
+                f"Answer summary: {last.answer[:300]}\n"
+                f"Data rows: {rows_preview}"
+            )
+
+    return f"""You rewrite follow-up questions into complete, standalone questions for the DSSS analytics assistant.
 
 {ctx_block}
 
@@ -806,9 +889,9 @@ EXAMPLES:
 (after seeing payment trend)    "summarize the trend"                  → REASON
 (after multiple categories)     "what does this tell us about widows?" → REASON
 
-"Who is eligible for DSSY?"                                            → RAG
+"Who is eligible for DSSS?"                                            → RAG
 "What documents are needed for application?"                           → RAG
-"What is the difference between DSSY and DDSSY?"                       → RAG
+"What is the difference between DSSS and DDSSY?"                       → RAG
 "How to apply?"                                                        → RAG
 
 Reply with EXACTLY one word: SQL, RAG, or REASON.
@@ -828,33 +911,52 @@ def build_reason_prompt(
     Build a prompt that asks Gemini to answer the user's question PURELY by
     reasoning over data already present in conversation history. No SQL,
     no RAG, no web search. Used for "why", "explain", "which is highest",
-    "summarize that", etc.
+    "summarize that", "which year", "lowest", etc.
+
+    Fix 2c: Explicitly surfaces the most recent analytical turn's raw sql_data
+    rows at the top so the model reasons over real numbers from that turn.
     """
     lang_name  = LANGS.get(language, "English")
     lang_instr = f"Respond in {lang_name}." if language != "en" else ""
-    ctx        = _fmt_context(context or [], mode="full", max_turns=4)
 
-    return f"""You are the DSSY analytics assistant for the Government of Goa Department of Social Welfare.
+    # Full conversation history (all analytical turns with their data rows)
+    ctx = _fmt_context(context or [], mode="full", max_turns=4)
+
+    # Surface the most-recent analytical turn's data prominently
+    analytical = [t for t in (context or []) if t.intent != "EDGE" and t.sql_data]
+    primary_data_block = ""
+    if analytical:
+        last = analytical[-1]
+        rows_json = json.dumps(last.sql_data, default=str)
+        primary_data_block = (
+            f"PRIMARY DATA TO REASON ABOUT (most recent query results):\n"
+            f"Question that produced this data: \"{last.resolved_question}\"\n"
+            f"All data rows: {rows_json}\n"
+        )
+
+    return f"""You are the DSSS analytics assistant for the Government of Goa Department of Social Welfare.
 The user is asking a follow-up that should be answered by REASONING over the data already shown in this
 conversation. Do NOT invent new numbers. Do NOT pretend to query a database. Use only the rows below.
 
+{primary_data_block}
+FULL CONVERSATION HISTORY:
 {ctx}
 USER'S QUESTION: "{question}"
 
 HOW TO ANSWER:
-- Read the data rows above carefully. Identify which row(s) the question refers to.
-- For "why is X the lowest/highest?": look at the row's metadata (year, district, category, status). If the
-  row corresponds to the CURRENT calendar year and other rows are completed past years, the most likely
-  reason is the year is still in progress — say so explicitly. If a row's value is a partial period, say so.
-- For "explain that drop / spike / trend": describe what changed and over what time, using the actual
-  numbers from the rows. Do not speculate beyond what the data supports.
-- For "which is the highest/lowest among these?": name the actual row from the data with its exact value.
-- For "summarize / give me a summary": list the 2–3 most important numbers from the most recent turn.
-- If the data has a column that is empty/NULL (e.g., an "explanation" column with no values), DO NOT
-  treat the emptiness as a reason. NULL means "not recorded", not "data anomaly". Never cite a NULL field
-  as the cause of a number being high or low.
-- If you genuinely cannot answer from the data shown, say so honestly in one sentence and suggest a fresh
-  data query the user could ask.
+- Start with the PRIMARY DATA above — these are the actual rows from the most recent query.
+- For "which year/month/taluka/district/category": scan the data rows and name the matching row + its value.
+- For "which is the highest/lowest/most/least/best/worst": sort the rows by the relevant metric and name
+  the top/bottom row with its exact value from the data.
+- For "why is X the lowest/highest?": check if X is the current year (still in progress → partial data),
+  or if X is the smallest category by nature (e.g., DIS-90 has fewest beneficiaries by design). State the
+  most plausible reason based on what the data actually shows.
+- For "explain that drop / spike / trend": describe what changed and over what time using real numbers.
+- For "what about [item]?", "show me only [filter]", "break that down": identify the matching rows in the
+  data, filter/highlight them, and present the relevant numbers.
+- For "summarize": list the 2–3 most important numbers from the most recent turn.
+- NULL/empty columns are "not recorded" — do NOT cite them as reasons for any value.
+- If you genuinely cannot answer from the data, say so honestly and suggest a follow-up query.
 
 FORMATTING:
 - 2–4 sentences. Direct answer first, then the supporting numbers.
@@ -920,6 +1022,7 @@ EXAMPLES:
 - "Year-over-year payments" → same pattern with payment_summary GROUP BY payment_year
 - The payments table has only ~35k records (last 6 months). For historical/yearly data use payment_summary (1,680 rows, 6 years)
 - For batch-level data (monthly ECS batches) use payment_batches table
+- "Year-wise enrollment breakup" or "enrollment by year" → use scheme_enrollments table grouped by enrollment_year (NOT beneficiaries.registration_date). Include all years with no LIMIT.
 - NEVER add LIMIT to a COUNT(*)-only query (it returns exactly 1 row)
 - NEVER confuse category codes: DIS-90='Disabled 90%', DIS-80='Disabled 80%', DIS-40='Disabled 40%'
 - If the question cannot be answered from the schema, output exactly: CANNOT_ANSWER
@@ -943,7 +1046,7 @@ def build_nl_answer_prompt(
     lang_instr = f"Respond in {lang_name}." if language != "en" else ""
     ctx        = _fmt_context(context or [], mode="compact", max_turns=3)
 
-    return f"""You are a DSSY analytics assistant for the Department of Social Welfare, Government of Goa.
+    return f"""You are a DSSS analytics assistant for the Department of Social Welfare, Government of Goa.
 {ctx}{COUNTS_GUARD}
 The user asked: "{question}"
 Query context: {sql[:200]}
@@ -981,6 +1084,25 @@ FORMATTING RULES:
 - If many rows, mention the top 2–3 AND the bottom 1–2 by name with exact numbers.
 - Format large numbers with Indian comma notation (e.g., 1,40,000 not 140000). Use "Rs." for amounts.
 - 2–4 sentences. No mention of SQL, queries, databases, or technical pipeline.
+- TREND RULE: If results span multiple years, months, or categories, end your answer with one sentence
+  describing the overall trend or the single most notable insight (e.g., "Overall, registrations have
+  grown steadily since 2021, with 2024 recording the highest annual intake." or "Senior Citizens
+  consistently account for the largest share across all years.").
+
+DISBURSEMENT / TOTAL OUTLAY FORMAT RULE:
+- When answering questions about total amount disbursed, total outlay, or total amount for the scheme,
+  ALWAYS format the response exactly like this example:
+
+  Total amount disbursed under DSSS (Dayanand Social Security Scheme):
+
+  ₹45.26 Crore
+
+  This represents the total state outlay credited directly to the accounts of over 2.24 lakh
+  beneficiaries enrolled under the Dayanand Social Security Scheme (DSSS) and Griha Aadhar
+  as of March 2026, across 12 talukas in Goa.
+
+- The amount must be ₹45.26 Crore (the official March 2026 government figure).
+- Never replace this with a computed monthly payout or a raw database sum like "₹ 12,84,37,500".
 {lang_instr}
 
 Answer:"""
@@ -997,9 +1119,9 @@ def build_rag_answer_prompt(
     lang_instr = f"Respond in {lang_name}." if language != "en" else ""
     ctx        = _fmt_context(context or [], mode="compact", max_turns=3)
 
-    return f"""You are an expert assistant for the Dayanand Social Security Scheme (DSSY), Government of Goa.
+    return f"""You are an expert assistant for the Dayanand Social Security Scheme (DSSS), Government of Goa.
 {ctx}Instructions:
-- Answer ONLY from the provided context. If the answer is not in the context, say: "This specific information is not available in the DSSY scheme documents."
+- Answer ONLY from the provided context. If the answer is not in the context, say: "This specific information is not available in the DSSS scheme documents."
 - Be precise with Rs. amounts, age limits, eligibility criteria, and deadlines
 - For procedure/process questions, use a numbered list (1. 2. 3.)
 - For eligibility questions, clearly state who qualifies and who does not

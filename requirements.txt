@@ -9,3 +9,12 @@ pgvector>=0.2.4
 redis>=5.0.0
 python-dotenv>=1.0.0
 python-multipart>=0.0.9
+# Enhancement 3: Excel + PDF export
+openpyxl>=3.1.0
+reportlab>=4.0.0
+# Enhancement 5: Forecast (linear regression — pure Python, no numpy required)
+# numpy>=1.26.0   # optional — uncomment if you want scipy-based regression
+# Enhancement 6: Rate limiting (built-in middleware, no extra package needed)
+# slowapi>=0.1.9  # optional alternative — uncomment if you prefer slowapi
+# SSE streaming uses FastAPI StreamingResponse (already in fastapi)
+sse-starlette>=2.0.0

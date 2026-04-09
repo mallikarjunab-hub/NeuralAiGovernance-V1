@@ -25,6 +25,11 @@ from backend.routers.query         import router as query_router
 from backend.routers.analytics     import router as analytics_router
 from backend.routers.beneficiaries import router as beneficiaries_router
 from backend.routers.rag           import router as rag_router
+from backend.routers.history       import router as history_router
+from backend.routers.export        import router as export_router
+from backend.routers.pins          import router as pins_router
+from backend.routers.audit         import router as audit_router
+from backend.middleware.rate_limit import RateLimitMiddleware
 
 logging.basicConfig(
     level=getattr(logging, settings.LOG_LEVEL),
@@ -74,16 +79,16 @@ async def lifespan(app: FastAPI):
                                 logger.error(f"Failed to read KB file: {e}")
                                 kb = ""
                             if kb:
-                                logger.info(f"Ingesting DSSY Knowledge Base ({len(kb):,} chars)...")
+                                logger.info(f"Ingesting DSSS Knowledge Base ({len(kb):,} chars)...")
                                 await ingest(
                                     db, "DSSY_Knowledge_Base", kb,
-                                    {"source": "DSSY Official Documents", "version": "2026"}
+                                    {"source": "DSSS Official Documents", "version": "2026"}
                                 )
-                                logger.info("DSSY Knowledge Base ingested")
+                                logger.info("DSSS Knowledge Base ingested")
                         else:
                             logger.warning(f"⚠️  KB file not found: {_KB}")
                     else:
-                        logger.info("✅ DSSY Knowledge Base already loaded")
+                        logger.info("✅ DSSS Knowledge Base already loaded")
 
                     # ── Ingest web sources (static gov pages, runs once) ──
                     try:
@@ -104,6 +109,26 @@ async def lifespan(app: FastAPI):
     gok = await gemini_ok()
     logger.info(f"{'✅' if gok else '⚠️ '} Gemini AI {'ready' if gok else 'NOT responding — check GEMINI_API_KEY'}")
 
+    # ── Cache warming (pre-fill top 20 queries, background task) ─
+    if neon_ok and gok:
+        try:
+            from backend.services.cache_warmer import warm_cache
+
+            def _on_warm_done(t):
+                if t.cancelled():
+                    return
+                exc = t.exception()
+                if exc:
+                    logger.warning(f"⚠️  Cache warm failed: {exc}")
+                else:
+                    logger.info(f"✅ Cache warmed: {t.result()} queries pre-loaded")
+
+            import asyncio
+            task = asyncio.create_task(warm_cache())
+            task.add_done_callback(_on_warm_done)
+        except Exception as we:
+            logger.warning(f"⚠️  Cache warming task failed (non-fatal): {we}")
+
     logger.info("-" * 60)
     logger.info(f"  Status: Neon={'OK' if neon_ok else 'DOWN'} | Gemini={'OK' if gok else 'DOWN'}")
     logger.info("=" * 60)
@@ -114,13 +139,14 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Neural AI Governance – DSSY v3",
+    title="Neural AI Governance – DSSS v3",
     version=settings.APP_VERSION,
     lifespan=lifespan,
     docs_url="/docs" if settings.ENVIRONMENT != "production" else None,
     redoc_url=None,
 )
 
+app.add_middleware(RateLimitMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], allow_credentials=True,
@@ -141,6 +167,10 @@ app.include_router(query_router)
 app.include_router(analytics_router)
 app.include_router(beneficiaries_router)
 app.include_router(rag_router)
+app.include_router(history_router)
+app.include_router(export_router)
+app.include_router(pins_router)
+app.include_router(audit_router)
 
 if os.path.isdir(_FE):
     app.mount("/static", StaticFiles(directory=_FE), name="static")

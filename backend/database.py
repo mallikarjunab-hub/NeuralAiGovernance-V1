@@ -126,15 +126,81 @@ async def get_neon_db() -> AsyncGenerator[AsyncSessionWrapper, None]:
 # SQL Execution — direct asyncpg for generated SQL queries
 # ═══════════════════════════════════════════════════════════════
 
+def _friendly_pg_error(e: Exception) -> str:
+    """
+    Map PostgreSQL error codes to friendly, actionable messages (Enhancement 9).
+    Covers the most common runtime errors encountered in NL-to-SQL pipelines.
+    """
+    msg = str(e).lower()
+    code = getattr(getattr(e, "pgcode", None), "__str__", lambda: "")() or ""
+
+    # Syntax / structure errors
+    if "42601" in code or "syntax error" in msg:
+        return ("The generated SQL contained a syntax error. "
+                "Please rephrase your question or try a simpler query.")
+    if "42703" in code or "column" in msg and "does not exist" in msg:
+        col = ""
+        import re; m = re.search(r'column "([^"]+)"', str(e))
+        if m: col = f' "{m.group(1)}"'
+        return (f"Column{col} not found in the table. "
+                "This can happen with ambiguous column names — try being more specific.")
+    if "42p01" in code or "relation" in msg and "does not exist" in msg:
+        return ("A table referenced in the query does not exist. "
+                "Please report this issue — the schema may have changed.")
+    if "42883" in code or "function" in msg and "does not exist" in msg:
+        return ("An unsupported SQL function was used. "
+                "Please rephrase your question differently.")
+
+    # Data / value errors
+    if "22003" in code or "numeric field overflow" in msg:
+        return ("A numeric value in the query exceeded the column's precision limit. "
+                "Try aggregating with ROUND() or reduce decimal places.")
+    if "22007" in code or "invalid input syntax for type date" in msg:
+        return ("An invalid date format was used. "
+                "Dates should be in YYYY-MM-DD format.")
+    if "22012" in code or "division by zero" in msg:
+        return ("Division by zero occurred in the query — "
+                "this usually means a category had zero beneficiaries for the filter applied.")
+    if "23505" in code or "unique constraint" in msg and "violates" in msg:
+        return ("A duplicate record was detected. No changes were made.")
+
+    # Connectivity / timeout
+    if "connection" in msg and ("refused" in msg or "timeout" in msg or "reset" in msg):
+        return ("The database connection timed out. "
+                "Neon PostgreSQL may be in cold-start — please wait 10 seconds and try again.")
+    if "too many connections" in msg or "53300" in code:
+        return ("The database connection pool is at capacity. "
+                "Please retry in a moment — connections will free up automatically.")
+
+    # Auth
+    if "28" in code or "password authentication" in msg:
+        return ("Database authentication failed. "
+                "Please check NEON_DATABASE_URL in your .env file.")
+
+    # Generic fallback
+    return (f"Database error: {str(e)[:120]}. "
+            "Please try rephrasing your question or contact support.")
+
+
 async def execute_sql_query(sql: str, params: list | None = None) -> list[dict]:
-    """Execute a PostgreSQL SELECT on Neon and return rows as dicts."""
+    """
+    Execute a PostgreSQL SELECT on Neon and return rows as dicts.
+    Raises RuntimeError with a friendly message on failure (Enhancement 9).
+    """
     import asyncpg
-    conn = await asyncpg.connect(settings.NEON_DATABASE_URL)
     try:
-        rows = await conn.fetch(sql, *(params or []))
-        return [dict(r) for r in rows]
-    finally:
-        await conn.close()
+        conn = await asyncpg.connect(_fix_neon(settings.NEON_DATABASE_URL))
+        try:
+            rows = await conn.fetch(sql, *(params or []))
+            return [dict(r) for r in rows]
+        finally:
+            await conn.close()
+    except asyncpg.PostgresError as e:
+        friendly = _friendly_pg_error(e)
+        raise RuntimeError(friendly) from e
+    except Exception as e:
+        friendly = _friendly_pg_error(e)
+        raise RuntimeError(friendly) from e
 
 
 

@@ -1,5 +1,5 @@
 """
-Gemini Service — domain logic layer for DSSY AI analytics
+Gemini Service — domain logic layer for DSSS AI analytics
 ============================================================
 Handles: intent classification · question resolution · SQL generation ·
          NL answer generation · RAG answer synthesis · chart suggestion ·
@@ -172,7 +172,7 @@ async def rag_answer(
     """Generate document-grounded answer from RAG chunks. No hallucination — only answers from context."""
     if not chunks:
         return (
-            "This information is not available in the DSSY knowledge base. "
+            "This information is not available in the DSSS knowledge base. "
             "Please contact the Directorate of Social Welfare, Government of Goa."
         )
     prompt = build_rag_answer_prompt(question, chunks, language, context)
@@ -197,14 +197,14 @@ async def web_search_fallback(question: str, language: str = "en") -> dict | Non
         # If language is not English, translate the answer
         if language != "en" and result["answer"]:
             lang_names = {
-                "hi": "Hindi", "te": "Telugu", "kn": "Kannada",
+                "hi": "Hindi", "kn": "Kannada",
                 "mr": "Marathi", "kok": "Konkani",
             }
             lang_name = lang_names.get(language)
             if lang_name:
                 translate_prompt = (
                     f"Translate the following text to {lang_name}. "
-                    f"Keep numbers, proper nouns, and scheme names (like DSSY) in English. "
+                    f"Keep numbers, proper nouns, and scheme names (like DSSS) in English. "
                     f"Return only the translation:\n\n{result['answer']}"
                 )
                 try:
@@ -261,21 +261,77 @@ def validate_sql(sql: str) -> tuple[bool, str]:
 # ── Chart Suggestion ──────────────────────────────────────────────────────────
 
 def suggest_chart(results: list) -> str | None:
-    """Suggest chart type based on result data shape."""
-    if not results or len(results) < 2:
+    """
+    Suggest chart type based on result data shape.
+
+    Rules (in order):
+      1. Single number result (1 row, all numeric cols or 1 col) → None (KPI, no chart)
+      2. Year/payment_year col + 2–8 rows + ≥2 numeric metric cols → grouped_bar
+         (covers 3-year comparison = 3 rows, 6-year trend with multiple cols = 6 rows)
+      3. Time-series label col (month/date/period/week/quarter/trend) → line
+      4. Year col with >8 rows → line (many-year trend)
+      5. ≤6 categorical rows → doughnut
+      6. >6 categorical rows → bar
+    """
+    if not results:
         return None
     cols = list(results[0].keys())
+
+    # Rule 1a: Truly single KPI — one row, one column
+    if len(results) == 1 and len(cols) == 1:
+        return None
+
+    # Rule 1b: One row with only one meaningful numeric value → KPI, no chart
+    if len(results) == 1:
+        num_vals = [c for c in cols if _is_num(results[0].get(c))]
+        if len(num_vals) <= 1:
+            return None
+
     if len(cols) < 2:
         return None
-    num = [c for c in cols if all(_is_num(r.get(c)) for r in results)]
-    lbl = [c for c in cols if c not in num]
-    if not num or not lbl:
+
+    # Classify columns: year/payment_year are always treated as label columns
+    # even though their values are integers (e.g. 2023, 2024, 2025).
+    _YEAR_COLS = {"year", "payment_year", "registration_year", "fiscal_year", "due_year"}
+
+    def _is_year_col(c: str) -> bool:
+        return c.lower() in _YEAR_COLS or c.lower().endswith("_year")
+
+    lbl = [c for c in cols if _is_year_col(c) or not all(_is_num(r.get(c)) for r in results)]
+    num = [c for c in cols if c not in lbl and all(_is_num(r.get(c)) for r in results)]
+
+    if not num:
         return None
+    if not lbl:
+        # All numeric — single row is a KPI
+        if len(results) == 1:
+            return None
+        return "bar"
+
     lc = lbl[0].lower()
-    if any(k in lc for k in ["month", "year", "date", "period", "week", "quarter", "trend"]):
+
+    # Rule 2: Year/payment_year + 2–8 rows + ≥2 metric numeric cols → grouped_bar
+    # Expanded from 5 to 8 rows to accommodate 6-year payment_summary data.
+    if (
+        (_is_year_col(lbl[0]) or "year" in lc)
+        and 2 <= len(results) <= 8
+        and len(num) >= 2
+    ):
+        return "grouped_bar"
+
+    # Rule 3: Time-series label → line
+    if any(k in lc for k in ["month", "date", "period", "week", "quarter", "trend"]):
         return "line"
+
+    # Rule 4: Year col with many rows → line (year-over-year trend)
+    if _is_year_col(lbl[0]) and len(results) > 8:
+        return "line"
+
+    # Rule 5: Few categorical rows → doughnut
     if len(results) <= 6:
         return "doughnut"
+
+    # Rule 6: Many categorical rows → bar
     return "bar"
 
 
