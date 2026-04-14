@@ -14,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from backend.config import settings
 from backend.database import (
     check_neon_health, wake_neon,
-    neon_session_context, dispose_all,
+    neon_session_context, dispose_all, get_last_neon_error,
 )
 from backend.services.cache import check_health as cache_ok
 from backend.services.gemini_service import check_health as gemini_ok
@@ -55,7 +55,10 @@ async def lifespan(app: FastAPI):
     neon_ok = False
     if settings.NEON_DATABASE_URL:
         neon_ok = await wake_neon(retries=5, delay=3.0)   # 15s window for cold start
-        logger.info(f"{'✅' if neon_ok else '⚠️ '} Neon PostgreSQL {'connected' if neon_ok else 'FAILED — check NEON_DATABASE_URL'}")
+        if neon_ok:
+            logger.info("✅ Neon PostgreSQL connected")
+        else:
+            logger.info(f"⚠️  Neon PostgreSQL FAILED — {get_last_neon_error() or 'unknown error'}")
 
         if neon_ok:
             async with neon_session_context() as db:

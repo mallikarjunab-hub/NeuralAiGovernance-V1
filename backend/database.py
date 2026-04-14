@@ -69,6 +69,7 @@ class AsyncSessionWrapper:
 
 _neon_engine = None
 _NeonSessionFactory = None
+_last_neon_error = None
 
 
 def _init_neon():
@@ -209,23 +210,30 @@ async def execute_sql_query(sql: str, params: list | None = None) -> list[dict]:
 # ═══════════════════════════════════════════════════════════════
 
 async def check_neon_health() -> bool:
+    global _last_neon_error
     try:
         async with neon_session_context() as s:
-            return (await s.execute(text("SELECT 1"))).scalar() == 1
-    except Exception:
+            ok = (await s.execute(text("SELECT 1"))).scalar() == 1
+            _last_neon_error = None
+            return ok
+    except Exception as e:
+        _last_neon_error = str(e)
         return False
+
+
+def get_last_neon_error() -> str | None:
+    return _last_neon_error
 
 
 
 async def wake_neon(retries: int = 3, delay: float = 2.0) -> bool:
     for i in range(1, retries + 1):
-        try:
-            if await check_neon_health():
-                return True
-        except Exception as e:
-            logger.warning(f"Neon PostgreSQL attempt {i}/{retries}: {e}")
-            if i < retries:
-                await asyncio.sleep(delay)
+        if await check_neon_health():
+            return True
+        if _last_neon_error:
+            logger.warning(f"Neon PostgreSQL attempt {i}/{retries} failed: {_last_neon_error}")
+        if i < retries:
+            await asyncio.sleep(delay)
     return False
 
 

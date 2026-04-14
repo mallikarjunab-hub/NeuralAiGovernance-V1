@@ -5,7 +5,7 @@ _r = None
 
 
 def _cache_key(q: str) -> str:
-    """Stable cache key using MD5 — survives process restarts unlike hash()."""
+    """Stable cache key using MD5  — survives process restarts unlike hash()."""
     return "q:" + hashlib.md5(q.lower().strip().encode()).hexdigest()
 
 
